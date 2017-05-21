@@ -1,120 +1,90 @@
 #include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
 #include <ArduinoJson.h> 
 #include <FS.h>
 
-const char* ssid = "Leutner";
-const char* password = "engenharia12";
 String buf;
+String buf2;
 
 const int AnalogIn  = A0;
 int ADread = 0, mod = 0, i = 0;
 float EWMA = 0.0;
 int Off_set = 350;
-WiFiServer server(80);
+int kk=1;
+ESP8266WebServer server(80);
 
 void setup() {
   Serial.begin(115200);
   
+  
+  
   //Abre o sistema de arquivos (mount)
   openFS();
   //Cria o arquivo caso o mesmo não exista
+  deleteFile();
   createFile();
  
-  writeFile("Teste Mestrado");
-  writeFile("Connecting to " + (String)ssid);
+  //writeFile("Teste Mestrado");
+  //writeFile("Connecting to ESP Mestrado");
   delay(10);
   
+  WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
   WiFi.softAP("ESP Mestrado");
-  
-  //while (WiFi.status() != WL_CONNECTED)
- 
+   
   // Start the server
+  server.on ( "/gpio/6", []() {
+    server.send ( 200, "application/json", "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}" );
+  } ); 
+  server.on("/gpio/7",dados);
+  server.on("/gpio/8",lerArquivo);
   server.begin();
+
+//  delay(50000);
+//  Serial.print("Desligar WIFI");
+//  WiFi.disconnect();   //desconecta a conexão WiFi
+// WiFi.mode(WIFI_OFF);   //desabilita o modem WiFi para reduzir o consumo de energia
+// WiFi.forceSleepBegin(); //entra no modo Sleep
+
+  
 }
 
 void loop() {
-  // Check if a client has connected
-  WiFiClient client = server.available();
-//  if (!client) {
-//    return;
-//  }
-  
-  // Wait until the client sends some data
-  Serial.println("new client");
-  if(client.available()){
-    delay(1);
-  
-  
-    // Read the first line of the request
-    String req = client.readStringUntil('\r');
-    Serial.println(req);
-    client.flush();
-  
-    StaticJsonBuffer<200> jsonBuffer;
-    JsonObject& root = jsonBuffer.createObject();
-    // Match the request
-    int val;
-    if (req.indexOf("/gpio/0") != -1){
-      
-      root["comando"] = "0";
-      root["nome"] = "Rafael";
-      root["idade"] = "23";
-      root["peso"] = "77";
-      root["tipo"] = "Humano";
-      root["valor"] = "10";
-  
-      writeResponse(client,root);
-      writeFile(root["nome"]);
+  server.handleClient();
+  if(kk==1)
+    for (int k=0;k<10;k++)
+      EMG();
+    ++kk;
+    if(kk==1000){
+    
+//      WiFi.forceSleepEnd();
+//      WiFi.mode(WIFI_AP);
+//      WiFi.softAP("ESP Mestrado");
     }
   
-    else if (req.indexOf("/gpio/1") != -1){
-      
-      root["comando"] = "1";
-      root["nome"] = "Aline";
-      root["idade"] = "26";
-      root["peso"] = "65";
-      root["tipo"] = "Humano";
-      root["valor"] = "20";
-      writeResponse(client,root);
-    }
-    else if (req.indexOf("/gpio/2") != -1){
-        
-        root["comando"] = "2";
-        root["nome"] = "Theo";
-        root["idade"] = "0.5";
-        root["peso"] = "15.5";
-        root["tipo"] = "Animal";
-        root["valor"] = "25"; 
-        writeResponse(client,root);
-      }
-    else if (req.indexOf("/gpio/3") != -1){
-   
-        root["comando"] = "1";
-        root["nome"] = "Fefe";
-        root["idade"] = "1";
-        root["peso"] = "3.5";
-        root["tipo"] = "Animal";
-        root["valor"] = "30";
-        writeResponse(client,root);
-  
-      }
-      else if (req.indexOf("/gpio/4") != -1){
-  
-      lerArquivo();   
-      client.print(buf);
-      client.flush();   
-      }
-  
-    else {
-      Serial.println("invalid request");
-      client.stop();
-      return;
-    }
-      
-    delay(1);
-    Serial.println("Client disonnected");
+}
+
+void dados(){
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  root["comando"] = "0";
+  root["nome"] = "Rafael";
+  root["idade"] = "23";
+  root["peso"] = "77";
+  root["tipo"] = "Humano";
+  JsonArray& valor = root.createNestedArray("valor");
+  File rFile = SPIFFS.open("/log.txt","r");
+  Serial.println("Reading file...");
+  while(rFile.available()) {
+    String line = rFile.readStringUntil('\n');
+    valor.add(line);
   }
+
+  String jsonout;
+  root.printTo(jsonout);
+  Serial.print(jsonout);
+  server.send(200, "application/json", jsonout);
+  
 }
 
 void formatFS(void){
@@ -143,7 +113,7 @@ void createFile(void){
  
 void deleteFile(void) {
   //Remove o arquivo
-  if(SPIFFS.remove("/log.txt")){
+  if(SPIFFS.remove("/log.txt")==false){
     Serial.println("Erro ao remover arquivo!");
   } else {
     Serial.println("Arquivo removido com sucesso!");
@@ -159,7 +129,7 @@ void writeFile(String msg) {
   if(!rFile){
     Serial.println("Erro ao abrir arquivo!");
   } else {
-    rFile.println("Log: " + msg);
+    rFile.println(msg);
     Serial.println(msg);
   }
   rFile.close();
@@ -173,8 +143,12 @@ void readFile(void) {
     String line = rFile.readStringUntil('\n');
     buf += line;
     buf += "<br />";
+    buf2 += line;
+    buf2 += "\n";
   }
   rFile.close();
+  Serial.print(buf2);
+
 }
  
 void closeFS(void){
@@ -192,14 +166,12 @@ void openFS(void){
 
 void lerArquivo(void){
   buf = "";
- 
-  buf += "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n";
-  buf += "<h3 style=""text-align: center;"">ESP8266 Web Log</h3>";
+  buf += "<h3 style=""text-align: center;"">ESP8266 Valores Resgistrados pelo analogRead</h3>";
   buf += "<p>";
   readFile();
   buf += "</p>";
-  buf += "<h4>Criado por Pedro Minatel</h4>";
   buf += "</html>\n";
+  server.send(200, "text/html", buf); 
 }
 
 void writeResponse(WiFiClient& client, JsonObject& json) {
@@ -211,4 +183,14 @@ void writeResponse(WiFiClient& client, JsonObject& json) {
   json.prettyPrintTo(client);
 }
 
+void EMG(void){
+
+  for (i = 0; i < 2200; i++){
+  ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
+  mod = abs (ADread);  //calcula o módulo da leitura do AD
+  EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
+  }
+  Serial.println(EWMA);  //imprime o valor da EWMA
+  writeFile(String(EWMA));
+}
 
