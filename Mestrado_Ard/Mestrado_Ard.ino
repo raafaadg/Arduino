@@ -16,16 +16,13 @@ ESP8266WebServer server(80);
 void setup() {
   Serial.begin(115200);
   
-  
-  
   //Abre o sistema de arquivos (mount)
   openFS();
   //Cria o arquivo caso o mesmo não exista
   deleteFile();
   createFile();
  
-  //writeFile("Teste Mestrado");
-  //writeFile("Connecting to ESP Mestrado");
+  writeFile("Teste Mestrado");
   delay(10);
   
   WiFi.mode(WIFI_AP);
@@ -33,11 +30,12 @@ void setup() {
   WiFi.softAP("ESP Mestrado");
    
   // Start the server
-  server.on ( "/gpio/6", []() {
-    server.send ( 200, "application/json", "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}" );
+  server.on ( "/mestrado/6", []() {
+    server.send ( 200, "application/json", "{\"comando\":\"0\",\"nome\":\"Rafael\",\"idade\":23,\"peso\":77,\"valor\":20}" );
   } ); 
-  server.on("/gpio/7",dados);
-  server.on("/gpio/8",lerArquivo);
+  server.on("/mestrado/7",dados);
+  server.on("/mestrado/8",lerArquivo);
+  server.on("/mestrado/10",capturar);
   server.begin();
 
 //  delay(50000);
@@ -64,6 +62,7 @@ void loop() {
   
 }
 
+void capturar(){}
 void dados(){
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
