@@ -7,35 +7,33 @@ String buf;
 String buf2;
 
 const int AnalogIn  = A0;
-int ADread = 0, mod = 0, i = 0;
+const int WakeUp = 4;
+int ADread = 0, mod = 0, i = 0, contr = 2;
 float EWMA = 0.0;
 int Off_set = 350;
-int kk=1;
+int kk=2;
 ESP8266WebServer server(80);
 
 void setup() {
   Serial.begin(115200);
-  
+  pinMode(WakeUp, INPUT);
   //Abre o sistema de arquivos (mount)
   openFS();
-  //Cria o arquivo caso o mesmo não exista
-  deleteFile();
-  createFile();
- 
-  writeFile("Teste Mestrado");
+  
   delay(10);
   
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
-  WiFi.softAP("ESP Mestrado");
+  WiFi.softAP("ESP Mestrado 2");
    
   // Start the server
   server.on ( "/mestrado/6", []() {
     server.send ( 200, "application/json", "{\"comando\":\"0\",\"nome\":\"Rafael\",\"idade\":23,\"peso\":77,\"valor\":20}" );
   } ); 
-  server.on("/mestrado/7",dados);
-  server.on("/mestrado/8",lerArquivo);
-  server.on("/mestrado/10",capturar);
+  server.on("/mestrado/del",deleteFile);
+  server.on("/mestrado/data",dados);
+  server.on("/mestrado/read",lerArquivo);
+  server.on("/mestrado/go",capturar);
   server.begin();
 
 //  delay(50000);
@@ -49,20 +47,36 @@ void setup() {
 
 void loop() {
   server.handleClient();
-  if(kk==1)
-    for (int k=0;k<10;k++)
+  if(kk==1){
       EMG();
-    ++kk;
-    if(kk==1000){
-    
-//      WiFi.forceSleepEnd();
-//      WiFi.mode(WIFI_AP);
-//      WiFi.softAP("ESP Mestrado");
+  }
+    if(digitalRead(WakeUp)&& contr==1){
+      //Serial.println("Ligar WIFI");
+      WiFi.forceSleepWake();
+      WiFi.mode(WIFI_AP);
+      //WiFi.softAP("ESP Mestrado");
+      kk=2;
+      contr = 2;
     }
+
   
 }
 
-void capturar(){}
+void capturar(){
+  buf = "";
+  buf += "<h3 style=""text-align: center;"">Enviado comando de captura</h3>";
+  buf += "<p>";
+  buf += "</p>";
+  buf += "</html>\n";
+  server.send(200, "text/html", buf);
+  Serial.println("Enviado comando de captura");
+  kk=1;
+  contr=1;
+  //Serial.println("Desligar WIFI");
+   //WiFi.disconnect();   //desconecta a conexão WiFi
+   WiFi.mode(WIFI_OFF);   //desabilita o modem WiFi para reduzir o consumo de energia
+   WiFi.forceSleepBegin(); //entra no modo Sleep
+  }
 void dados(){
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
@@ -112,11 +126,15 @@ void createFile(void){
  
 void deleteFile(void) {
   //Remove o arquivo
+  server.send(200, "text/html", "Deletando arquivo criado");
   if(SPIFFS.remove("/log.txt")==false){
     Serial.println("Erro ao remover arquivo!");
   } else {
     Serial.println("Arquivo removido com sucesso!");
   }
+  //Cria o arquivo caso o mesmo não exista
+  createFile();
+  writeFile("Teste Mestrado");
 }
  
 void writeFile(String msg) {
@@ -129,7 +147,7 @@ void writeFile(String msg) {
     Serial.println("Erro ao abrir arquivo!");
   } else {
     rFile.println(msg);
-    Serial.println(msg);
+    //Serial.println(msg);
   }
   rFile.close();
 }
@@ -189,7 +207,8 @@ void EMG(void){
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  Serial.println(EWMA);  //imprime o valor da EWMA
+  //Serial.println(EWMA);  //imprime o valor da EWMA
   writeFile(String(EWMA));
+  //writeFile(String(ADread));
 }
 
