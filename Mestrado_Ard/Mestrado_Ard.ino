@@ -7,7 +7,7 @@ String buf;
 String buf2;
 
 const int AnalogIn  = A0;
-const int WakeUp = 4;
+const int WakeUp = D1;
 int ADread = 0, mod = 0, i = 0, contr = 2;
 float EWMA = 0.0;
 int Off_set = 350;
@@ -54,6 +54,7 @@ void loop() {
       //Serial.println("Ligar WIFI");
       WiFi.forceSleepWake();
       WiFi.mode(WIFI_AP);
+      delay(1);
       //WiFi.softAP("ESP Mestrado");
       kk=2;
       contr = 2;
@@ -76,6 +77,7 @@ void capturar(){
    //WiFi.disconnect();   //desconecta a conexão WiFi
    WiFi.mode(WIFI_OFF);   //desabilita o modem WiFi para reduzir o consumo de energia
    WiFi.forceSleepBegin(); //entra no modo Sleep
+   delay(100);
   }
 void dados(){
   DynamicJsonBuffer jsonBuffer;
