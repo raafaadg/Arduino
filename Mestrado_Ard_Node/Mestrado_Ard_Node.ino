@@ -2,48 +2,35 @@
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h> 
 #include <FS.h>
-#include "user_interface.h"
-#include <math.h>
 
-static os_timer_t mTimer;
-bool cap = false, _timeout = false;
-String buf,buf2;
+String buf;
+String buf2;
+bool cap = false;
 const int AnalogIn  = A0;
 const int WakeUp = D1;
 int ADread = 0, mod = 0, i = 0, contr = 2;
 float EWMA = 0.0;
 int Off_set = 350;
-long startTime ;
-FSInfo fs_info;
 ESP8266WebServer server(80);
-
-void tCallback(void *tCall){
-    _timeout = true;
-}
-void usrInit(void){
-    os_timer_setfn(&mTimer, tCallback, NULL);
-    os_timer_arm(&mTimer, 1000, true);
-}
 
 void setup() {
   Serial.begin(115200);
   pinMode(WakeUp, INPUT);
   //Abre o sistema de arquivos (mount)
   openFS();
-  usrInit();
+  
   delay(10);
   
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
-  WiFi.softAP("ESP Node Rede Mestrado");
+  WiFi.softAP("ESP 2 Rede Mestrado");
    
   // Start the server
-
   server.on ( "/mestrado/6", []() {
     server.send ( 200, "application/json", "{\"comando\":\"0\",\"nome\":\"Rafael\",\"idade\":23,\"peso\":77,\"valor\":20}" );
   } ); 
   server.on("/mestrado/del",deleteFile);
-  server.on("/mestrado/data",createFile);
+  server.on("/mestrado/data",dados);
   server.on("/mestrado/read",lerArquivo);
   server.on("/mestrado/go",capturar);
   server.begin();
@@ -54,28 +41,15 @@ void loop() {
   server.handleClient();
   if(cap){
       EMG();
-      if (_timeout){
-        writeFile(String(round(EWMA)));
-        Serial.print("Gravando");
-        Serial.print("   Tempo decorrido:");
-        Serial.print(millis() - startTime);
-        Serial.print("    Tamanho do arquivo:");
-        SPIFFS.info(fs_info);
-        Serial.println(fs_info.usedBytes);
-        _timeout = false;
-        
-      }
-      yield(); //um putosegundo soh pra respirar
   }
-    if(!digitalRead(WakeUp)&& contr==1){
-      //Serial.println("Ligar WIFI");
+    if(digitalRead(WakeUp)&& contr==1){
       WiFi.forceSleepWake();
       WiFi.mode(WIFI_AP);
       delay(100);
       cap = false;
       contr = 2;
+      Serial.println("Ligar WIFI");
     }  
-    
 }
 
 void capturar(){
@@ -88,12 +62,11 @@ void capturar(){
   //Serial.println("Enviado comando de captura");
   cap = true;
   contr=1;
-  //Serial.println("Desligar WIFI");
    //WiFi.disconnect();   //desconecta a conexão WiFi
    WiFi.mode(WIFI_OFF);   //desabilita o modem WiFi para reduzir o consumo de energia
    WiFi.forceSleepBegin(); //entra no modo Sleep
    delay(100);
-   startTime = millis();
+   Serial.println("Desligar WIFI");
   }
 void dados(){
   DynamicJsonBuffer jsonBuffer;
@@ -127,20 +100,20 @@ void createFile(void){
  
   //Cria o arquivo se ele não existir
   if(SPIFFS.exists("/log.txt")){
-    server.send(200, "text/html", "Arquivo ja existe!");
-    //Serial.println("Arquivo ja existe!");
+    //server.send(200, "text/html", "Arquivo ja existe!");
+    Serial.println("Arquivo ja existe!");
   } else {
-    server.send(200, "text/html", "Criando o arquivo...");
-    //Serial.println("Criando o arquivo...");
+    //server.send(200, "text/html", "Criando o arquivo...");
+    Serial.println("Criando o arquivo...");
     wFile = SPIFFS.open("/log.txt","w+");
  
     //Verifica a criação do arquivo
     if(!wFile){
-      server.send(200, "text/html", "Erro ao criar arquivo!");
-      //Serial.println("Erro ao criar arquivo!");
+      //server.send(200, "text/html", "Erro ao criar arquivo!");
+      Serial.println("Erro ao criar arquivo!");
     } else {
-      server.send(200, "text/html", "Arquivo criado com sucesso!");
-      //Serial.println("Arquivo criado com sucesso!");
+      //server.send(200, "text/html", "Arquivo criado com sucesso!");
+      Serial.println("Arquivo criado com sucesso!");
     }
   }
   wFile.close();
@@ -150,11 +123,11 @@ void deleteFile(void) {
   //Remove o arquivo
   
   if(SPIFFS.remove("/log.txt")==false){
-    server.send(200, "text/html", "Erro ao remover arquivo!");
-    //Serial.println("Erro ao remover arquivo!");
+    //server.send(200, "text/html", "Erro ao remover arquivo!");
+    Serial.println("Erro ao remover arquivo!");
   } else {
-    server.send(200, "text/html", "Arquivo removido com sucesso!");
-    //Serial.println("Arquivo removido com sucesso!");
+    //server.send(200, "text/html", "Arquivo removido com sucesso!");
+    Serial.println("Arquivo removido com sucesso!");
   }
   //Cria o arquivo caso o mesmo não exista
   createFile();
@@ -168,7 +141,7 @@ void writeFile(String msg) {
   File rFile = SPIFFS.open("/log.txt","a+");
  
   if(!rFile){
-    //Serial.println("Erro ao abrir arquivo!");
+    Serial.println("Erro ao abrir arquivo!");
   } else {
     rFile.println(msg);
     //Serial.println(msg);
@@ -179,7 +152,7 @@ void writeFile(String msg) {
 void readFile(void) {
   //Faz a leitura do arquivo
   File rFile = SPIFFS.open("/log.txt","r");
-  //Serial.println("Reading file...");
+  Serial.println("Reading file...");
   while(rFile.available()) {
     String line = rFile.readStringUntil('\n');
     buf += line;
@@ -188,7 +161,7 @@ void readFile(void) {
     buf2 += "\n";
   }
   rFile.close();
-  //Serial.print(buf2);
+  Serial.print(buf2);
 
 }
  
@@ -199,9 +172,9 @@ void closeFS(void){
 void openFS(void){
   //Abre o sistema de arquivos
   if(!SPIFFS.begin()){
-    //Serial.println("Erro ao abrir o sistema de arquivos");
+    Serial.println("Erro ao abrir o sistema de arquivos");
   } else {
-    //Serial.println("Sistema de arquivos aberto com sucesso!");
+    Serial.println("Sistema de arquivos aberto com sucesso!");
   }
 }
 
@@ -231,7 +204,8 @@ void EMG(void){
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  Serial.println(round(EWMA));  //imprime o valor da EWMA
-  //writeFile(String(EWMA));
+  //Serial.println(EWMA);  //imprime o valor da EWMA
+  writeFile(String(EWMA));
+  //writeFile(String(ADread));
 }
 
