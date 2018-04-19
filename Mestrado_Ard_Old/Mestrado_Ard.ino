@@ -7,7 +7,7 @@ String buf;
 String buf2;
 
 const int AnalogIn  = A0;
-const int WakeUp = D1;
+const int WakeUp = 5;
 int ADread = 0, mod = 0, i = 0, contr = 2;
 float EWMA = 0.0;
 int Off_set = 350;
@@ -24,7 +24,7 @@ void setup() {
   
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
-  WiFi.softAP("ESP Mestrado 2");
+  WiFi.softAP("ESP Rede Mestrado");
    
   // Start the server
   server.on ( "/mestrado/6", []() {
@@ -35,13 +35,6 @@ void setup() {
   server.on("/mestrado/read",lerArquivo);
   server.on("/mestrado/go",capturar);
   server.begin();
-
-//  delay(50000);
-//  Serial.print("Desligar WIFI");
-//  WiFi.disconnect();   //desconecta a conexão WiFi
-// WiFi.mode(WIFI_OFF);   //desabilita o modem WiFi para reduzir o consumo de energia
-// WiFi.forceSleepBegin(); //entra no modo Sleep
-
   
 }
 
@@ -50,7 +43,7 @@ void loop() {
   if(kk==1){
       EMG();
   }
-    if(digitalRead(WakeUp)&& contr==1){
+    if(!digitalRead(WakeUp)&& contr==1){
       //Serial.println("Ligar WIFI");
       WiFi.forceSleepWake();
       WiFi.mode(WIFI_AP);
@@ -59,8 +52,6 @@ void loop() {
       kk=2;
       contr = 2;
     }
-
-  
 }
 
 void capturar(){
@@ -70,7 +61,7 @@ void capturar(){
   buf += "</p>";
   buf += "</html>\n";
   server.send(200, "text/html", buf);
-  Serial.println("Enviado comando de captura");
+  //Serial.println("Enviado comando de captura");
   kk=1;
   contr=1;
   //Serial.println("Desligar WIFI");
@@ -89,7 +80,7 @@ void dados(){
   root["tipo"] = "Humano";
   JsonArray& valor = root.createNestedArray("valor");
   File rFile = SPIFFS.open("/log.txt","r");
-  Serial.println("Reading file...");
+  //Serial.println("Reading file...");
   while(rFile.available()) {
     String line = rFile.readStringUntil('\n');
     valor.add(line);
@@ -166,7 +157,7 @@ void readFile(void) {
     buf2 += "\n";
   }
   rFile.close();
-  Serial.print(buf2);
+  //Serial.print(buf2);
 
 }
  
