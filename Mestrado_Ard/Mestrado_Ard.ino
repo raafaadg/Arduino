@@ -9,7 +9,7 @@ static os_timer_t mTimer;
 bool cap = false, _timeout = false;
 String buf,buf2;
 const int AnalogIn  = A0;
-const int WakeUp = D1;
+const int WakeUp = 5;
 int ADread = 0, mod = 0, i = 0, contr = 2;
 float EWMA = 0.0;
 int Off_set = 350;
@@ -22,7 +22,7 @@ void tCallback(void *tCall){
 }
 void usrInit(void){
     os_timer_setfn(&mTimer, tCallback, NULL);
-    os_timer_arm(&mTimer, 1000, true);
+    os_timer_arm(&mTimer, 100, true);
 }
 
 void setup() {
@@ -35,13 +35,14 @@ void setup() {
   
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
-  WiFi.softAP("ESP Node Rede Mestrado");
+  WiFi.softAP("ESP Brux Mestrado");
    
   // Start the server
 
   server.on ( "/mestrado/6", []() {
     server.send ( 200, "application/json", "{\"comando\":\"0\",\"nome\":\"Rafael\",\"idade\":23,\"peso\":77,\"valor\":20}" );
   } ); 
+  server.on("/mestrado/inf",infos);
   server.on("/mestrado/del",deleteFile);
   server.on("/mestrado/data",createFile);
   server.on("/mestrado/read",lerArquivo);
@@ -56,16 +57,30 @@ void loop() {
       EMG();
       if (_timeout){
         writeFile(String(round(EWMA)));
-        Serial.print("Gravando");
-        Serial.print("   Tempo decorrido:");
-        Serial.print(millis() - startTime);
-        Serial.print("    Tamanho do arquivo:");
-        SPIFFS.info(fs_info);
-        Serial.println(fs_info.usedBytes);
+//        Serial.print("Gravando");
+//        Serial.print("   Tempo decorrido:");
+//        Serial.print(millis() - startTime);
+//        SPIFFS.info(fs_info);
+//        Serial.print("    TotalBytes:");
+//        Serial.print(fs_info.totalBytes);
+//        Serial.print("    Tamanho do arquivo:");
+//        Serial.print(fs_info.usedBytes);
+//        Serial.print("    BlockSize:");
+//        Serial.print(fs_info.blockSize);
+//        Serial.print("    Page Size:");
+//        Serial.print(fs_info.pageSize);
+//        Serial.print("    MaxOpenFiles:");
+//        Serial.print(fs_info.maxOpenFiles);
+//        Serial.print("    MaxPathLength:");
+//        Serial.print(fs_info.maxPathLength);
+//        File rFile = SPIFFS.open("/log.txt","r");
+//        Serial.print("    Size File:");
+//        Serial.println(rFile.size());
+//        rFile.close();
         _timeout = false;
         
       }
-      yield(); //um putosegundo soh pra respirar
+      //yield(); //um putosegundo soh pra respirar
   }
     if(!digitalRead(WakeUp)&& contr==1){
       //Serial.println("Ligar WIFI");
@@ -78,6 +93,17 @@ void loop() {
     
 }
 
+void infos(void){
+    File rFile = SPIFFS.open("/log.txt","r");
+    buf = "";
+    buf += "<h3 style=""text-align: center;"">Enviando informações sobre o ESP e arquivo</h3>";
+    buf += "<p>";
+    buf += "<h2 style=""text-align: center;"">Tamanho do Arquivo</h3>";
+    buf += rFile.size();
+    buf += "</p>";
+    buf += "</html>\n";
+    rFile.close();
+  }
 void capturar(){
   buf = "";
   buf += "<h3 style=""text-align: center;"">Enviado comando de captura</h3>";
@@ -93,7 +119,7 @@ void capturar(){
    WiFi.mode(WIFI_OFF);   //desabilita o modem WiFi para reduzir o consumo de energia
    WiFi.forceSleepBegin(); //entra no modo Sleep
    delay(100);
-   startTime = millis();
+   //startTime = millis();
   }
 void dados(){
   DynamicJsonBuffer jsonBuffer;
@@ -231,7 +257,7 @@ void EMG(void){
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  Serial.println(round(EWMA));  //imprime o valor da EWMA
+  //Serial.println(round(EWMA));  //imprime o valor da EWMA
   //writeFile(String(EWMA));
 }
 
