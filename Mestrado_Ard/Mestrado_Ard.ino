@@ -9,12 +9,13 @@ static os_timer_t mTimer;
 bool cap = false, _timeout = false;
 String buf,buf2;
 const int AnalogIn  = A0;
-const int WakeUp = 5;
-int ADread = 0, mod = 0, i = 0, contr = 2;
+const int WakeUp = 4;
+int ADread = 0, mod = 0, i = 0, contr = 2, count = 0;
 float EWMA = 0.0;
 int Off_set = 350;
-long startTime ;
+long startTime, recordTime ;
 FSInfo fs_info;
+File file;
 ESP8266WebServer server(80);
 
 void tCallback(void *tCall){
@@ -35,7 +36,7 @@ void setup() {
   
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
-  WiFi.softAP("ESP Brux Mestrado");
+  WiFi.softAP("ESP Proto Mestrado");
    
   // Start the server
 
@@ -56,31 +57,32 @@ void loop() {
   if(cap){
       EMG();
       if (_timeout){
+        count = count + 1;
+        recordTime = millis();
         writeFile(String(round(EWMA)));
-//        Serial.print("Gravando");
-//        Serial.print("   Tempo decorrido:");
-//        Serial.print(millis() - startTime);
-//        SPIFFS.info(fs_info);
-//        Serial.print("    TotalBytes:");
-//        Serial.print(fs_info.totalBytes);
-//        Serial.print("    Tamanho do arquivo:");
-//        Serial.print(fs_info.usedBytes);
-//        Serial.print("    BlockSize:");
-//        Serial.print(fs_info.blockSize);
-//        Serial.print("    Page Size:");
-//        Serial.print(fs_info.pageSize);
-//        Serial.print("    MaxOpenFiles:");
-//        Serial.print(fs_info.maxOpenFiles);
-//        Serial.print("    MaxPathLength:");
-//        Serial.print(fs_info.maxPathLength);
-//        File rFile = SPIFFS.open("/log.txt","r");
-//        Serial.print("    Size File:");
-//        Serial.println(rFile.size());
-//        rFile.close();
+        Serial.print("Gravando");
+        Serial.print("   Tempo decorrido:");
+        Serial.print(millis() - startTime);
+        SPIFFS.info(fs_info);
+        Serial.print("    TotalBytes:");
+        Serial.print(fs_info.totalBytes);
+        Serial.print("    Tamanho do arquivo:");
+        Serial.print(fs_info.usedBytes);
+        Serial.print("    BlockSize:");
+        Serial.print(fs_info.blockSize);
+        Serial.print("    Page Size:");
+        Serial.print(fs_info.pageSize);
+        Serial.print("    MaxOpenFiles:");
+        Serial.print(fs_info.maxOpenFiles);
+        Serial.print("    MaxPathLength:");
+        Serial.print(fs_info.maxPathLength);
+        Serial.print("    Size File:");
+        Serial.print(file.size());
+        Serial.print("    Numero de gravações:");
         _timeout = false;
-        
+        Serial.println(count);
       }
-      //yield(); //um putosegundo soh pra respirar
+      yield(); //um putosegundo soh pra respirar
   }
     if(!digitalRead(WakeUp)&& contr==1){
       //Serial.println("Ligar WIFI");
@@ -89,6 +91,7 @@ void loop() {
       delay(100);
       cap = false;
       contr = 2;
+      file.close();
     }  
     
 }
@@ -119,6 +122,7 @@ void capturar(){
    WiFi.mode(WIFI_OFF);   //desabilita o modem WiFi para reduzir o consumo de energia
    WiFi.forceSleepBegin(); //entra no modo Sleep
    delay(100);
+   file = SPIFFS.open("/log.txt","a+");
    //startTime = millis();
   }
 void dados(){
@@ -191,15 +195,15 @@ void writeFile(String msg) {
  
   //Abre o arquivo para adição (append)
   //Inclue sempre a escrita na ultima linha do arquivo
-  File rFile = SPIFFS.open("/log.txt","a+");
+  //File rFile = SPIFFS.open("/log.txt","a+");
  
-  if(!rFile){
+  if(!file){
     //Serial.println("Erro ao abrir arquivo!");
   } else {
-    rFile.println(msg);
+    file.println(msg);
     //Serial.println(msg);
   }
-  rFile.close();
+  //rFile.close();
 }
  
 void readFile(void) {
