@@ -5,14 +5,20 @@
 #include "user_interface.h"
 #include <math.h>
 
+#define SPIFFS_CFG_PHYS_SZ(ignore)        (1024*1024*2)
+#define SPIFFS_CFG_PHYS_ERASE_SZ(ignore)  (65536)
+#define SPIFFS_CFG_PHYS_ADDR(ignore)      (0)
+#define SPIFFS_CFG_LOG_PAGE_SZ(ignore)    (256)
+#define SPIFFS_CFG_LOG_BLOCK_SZ(ignore)   (65536)
+
 static os_timer_t mTimer;
 bool cap = false, _timeout = false;
 String buf,buf2;
 const int AnalogIn  = A0;
-const int WakeUp = 4;
+const int WakeUp = 5;
 int ADread = 0, mod = 0, i = 0, contr = 2, count = 0;
 float EWMA = 0.0;
-int Off_set = 350;
+int Off_set = 800;
 long startTime, recordTime ;
 FSInfo fs_info;
 File file;
@@ -36,7 +42,7 @@ void setup() {
   
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
-  WiFi.softAP("ESP Proto Mestrado");
+  WiFi.softAP("ESP Brux Mestrado");
    
   // Start the server
 
@@ -45,7 +51,9 @@ void setup() {
   } ); 
   server.on("/mestrado/inf",infos);
   server.on("/mestrado/del",deleteFile);
-  server.on("/mestrado/data",createFile);
+  server.on("/mestrado/data",dados);
+  server.on("/mestrado/create",createFile);
+  server.on("/mestrado/dir",diretorio);
   server.on("/mestrado/read",lerArquivo);
   server.on("/mestrado/go",capturar);
   server.begin();
@@ -57,9 +65,8 @@ void loop() {
   if(cap){
       EMG();
       if (_timeout){
-        count = count + 1;
+        /*count = count + 1;
         recordTime = millis();
-        writeFile(String(round(EWMA)));
         Serial.print("Gravando");
         Serial.print("   Tempo decorrido:");
         Serial.print(millis() - startTime);
@@ -79,8 +86,9 @@ void loop() {
         Serial.print("    Size File:");
         Serial.print(file.size());
         Serial.print("    Numero de gravações:");
+        Serial.println(count);*/
+        writeFile(String(round(EWMA)));
         _timeout = false;
-        Serial.println(count);
       }
       yield(); //um putosegundo soh pra respirar
   }
@@ -95,6 +103,14 @@ void loop() {
     }  
     
 }
+
+void diretorio(void){
+  server.send(200, "text/html", "Diretórios existentes");
+  Dir dirr = SPIFFS.openDir("/");
+  while(dirr.next()){
+    Serial.printf("%s - %u bytes\n", dirr.fileName().c_str(), dirr.fileSize());
+    }
+  }
 
 void infos(void){
     File rFile = SPIFFS.open("/log.txt","r");
@@ -122,10 +138,11 @@ void capturar(){
    WiFi.mode(WIFI_OFF);   //desabilita o modem WiFi para reduzir o consumo de energia
    WiFi.forceSleepBegin(); //entra no modo Sleep
    delay(100);
-   file = SPIFFS.open("/log.txt","a+");
+   file = SPIFFS.open("/log.txt","a");
    //startTime = millis();
   }
 void dados(){
+  server.send(200, "text/html", "Criando buffer json");
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
   root["comando"] = "0";
@@ -137,14 +154,18 @@ void dados(){
   File rFile = SPIFFS.open("/log.txt","r");
   //Serial.println("Reading file...");
   while(rFile.available()) {
-    String line = rFile.readStringUntil('\n');
+    String line = rFile.readStringUntil(',');
+    //Serial.println(line);
     valor.add(line);
   }
 
   String jsonout;
   root.printTo(jsonout);
   //Serial.print(jsonout);
+  Serial.println("Enviando json");
+  Serial.println(jsonout);
   server.send(200, "application/json", jsonout);
+  Serial.println("Json enviada");
   
 }
 
@@ -200,7 +221,8 @@ void writeFile(String msg) {
   if(!file){
     //Serial.println("Erro ao abrir arquivo!");
   } else {
-    file.println(msg);
+    file.print(msg);
+    file.print(',');
     //Serial.println(msg);
   }
   //rFile.close();
@@ -210,13 +232,23 @@ void readFile(void) {
   //Faz a leitura do arquivo
   File rFile = SPIFFS.open("/log.txt","r");
   //Serial.println("Reading file...");
+  count = 0;
   while(rFile.available()) {
-    String line = rFile.readStringUntil('\n');
-    buf += line;
-    buf += "<br />";
-    buf2 += line;
-    buf2 += "\n";
+    String line = rFile.readStringUntil(',');
+    Serial.println(line);
+//    buf += line;
+//    buf += ",";
+//    //buf += "<br />";
+//    buf2 += line;
+//    buf2 += "\n";
+//    count = count + 1;
+//    delay(1);
+    /*if(count == 500){
+      serial
+      }*/
   }
+    //buf += "<br />";
+  //Serial.println("Acabou a leitura");
   rFile.close();
   //Serial.print(buf2);
 
@@ -236,13 +268,16 @@ void openFS(void){
 }
 
 void lerArquivo(void){
-  buf = "";
-  buf += "<h3 style=""text-align: center;"">ESP8266 Valores Resgistrados pelo analogRead</h3>";
-  buf += "<p>";
+  Serial.println("Leitura Inicializada");
+  server.send(200, "text/html", "Leitura Inicializada"); 
+//  buf = "";
+//  buf += "<h3 style=""text-align: center;"">ESP8266 Valores Resgistrados pelo analogRead</h3>";
+//  buf += "<p>";
   readFile();
-  buf += "</p>";
-  buf += "</html>\n";
-  server.send(200, "text/html", buf); 
+//  buf += "</p>";
+//  buf += "</html>\n";
+//  server.send(200, "text/html", buf); 
+  Serial.println("Leitura Finalizada");
 }
 
 void writeResponse(WiFiClient& client, JsonObject& json) {
@@ -261,7 +296,7 @@ void EMG(void){
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  //Serial.println(round(EWMA));  //imprime o valor da EWMA
+  Serial.println(round(EWMA));  //imprime o valor da EWMA
   //writeFile(String(EWMA));
 }
 
