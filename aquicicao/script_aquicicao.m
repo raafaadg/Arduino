@@ -1,13 +1,13 @@
 clear;close all;clc
 
-fileID = fopen('aquicicao1.txt','r');
-x = fscanf(fileID,'%f');
-fclose(fileID);
+% fileID = fopen('aquicicao1.txt','r');
+% x = fscanf(fileID,'%f');
+% fclose(fileID);
 
-fileID = fopen('aquicicao2.txt','r');
+fileID = fopen('aquicicao6.txt','r');
 xx = fscanf(fileID,'%f');
 fclose(fileID);
 
-plot(x)
+% plot(x)
 figure
 plot(xx)

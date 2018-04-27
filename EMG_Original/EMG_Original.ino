@@ -16,14 +16,15 @@ void setup() {
 
 void loop() {
   for (i = 0; i < 2200; i++){
-  ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
+  //ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
+  ADread = analogRead(AnalogIn);  //efetua a leitura do AD e subtrai do seu nivel de off-set
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  digitalWrite(2, LOW); //liga o LED
+  //digitalWrite(2, LOW); //liga o LED
   //Serial.print(millis()/1000);  //imprime o tempo em segundos
   //erial.print(", ");
-  Serial.println(EWMA);  //imprime o valor da EWMA
-  digitalWrite(2, HIGH); //desliga o LED
+  Serial.println(ADread);  //imprime o valor da EWMA
+  //digitalWrite(2, HIGH); //desliga o LED
 }
 

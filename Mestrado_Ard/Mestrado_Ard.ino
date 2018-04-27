@@ -1,5 +1,8 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 #include <ArduinoJson.h> 
 #include <FS.h>
 #include "user_interface.h"
@@ -18,7 +21,7 @@ const int AnalogIn  = A0;
 const int WakeUp = 5;
 int ADread = 0, mod = 0, i = 0, contr = 2, count = 0;
 float EWMA = 0.0;
-int Off_set = 800;
+int Off_set = 435;
 long startTime, recordTime ;
 FSInfo fs_info;
 File file;
@@ -57,11 +60,37 @@ void setup() {
   server.on("/mestrado/read",lerArquivo);
   server.on("/mestrado/go",capturar);
   server.begin();
-  
+
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else // U_SPIFFS
+      type = "filesystem";
+
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  });
+  ArduinoOTA.begin();
 }
 
 void loop() {
   server.handleClient();
+  ArduinoOTA.handle();
   if(cap){
       EMG();
       if (_timeout){
@@ -87,7 +116,12 @@ void loop() {
         Serial.print(file.size());
         Serial.print("    Numero de gravações:");
         Serial.println(count);*/
-        writeFile(String(round(EWMA)));
+        if(EWMA > 0){
+          writeFile(String(round(EWMA)));
+        }
+        else{
+          writeFile("0");
+          }
         _timeout = false;
       }
       yield(); //um putosegundo soh pra respirar
@@ -296,7 +330,7 @@ void EMG(void){
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  Serial.println(round(EWMA));  //imprime o valor da EWMA
+  Serial.println((EWMA));  //imprime o valor da EWMA
   //writeFile(String(EWMA));
 }
 
