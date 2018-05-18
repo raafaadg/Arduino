@@ -208,8 +208,8 @@ void json2(void){
 }
 void json3(void){
   EMG();
-//  valor.add(String(EWMA));
-  root["valor"] = String(round(EWMA));
+  root["valor"] = round(EWMA);
+  //root["valor"] = random(30,60);
   String jsonout;
   root.printTo(jsonout);
   server.send(200, "application/json", jsonout);
