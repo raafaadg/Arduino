@@ -208,7 +208,6 @@ void json2(void){
 }
 void json3(void){
   EMG();
-  root["valor"] = round(EWMA);
   //root["valor"] = random(30,60);
   String jsonout;
   root.printTo(jsonout);
@@ -342,7 +341,8 @@ void EMG(void){
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  //Serial.println((EWMA));  //imprime o valor da EWMA
+  Serial.println((EWMA));  //imprime o valor da EWMA
+  root["valor"] = round(EWMA);
   //valor.add(EWMA);
   //writeFile(String(EWMA));
   /*if(valor.size())
