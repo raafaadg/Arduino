@@ -8,6 +8,8 @@
 #include "user_interface.h"
 #include <math.h>
 
+#define ssid      "TELECOM_LAMMI"        // WiFi SSID
+#define password  "schottky"    // WiFi password
 #define SPIFFS_CFG_PHYS_SZ(ignore)        (1024*1024*2)
 #define SPIFFS_CFG_PHYS_ERASE_SZ(ignore)  (65536)
 #define SPIFFS_CFG_PHYS_ADDR(ignore)      (0)
@@ -21,11 +23,14 @@ const int AnalogIn  = A0;
 const int WakeUp = 5;
 int ADread = 0, mod = 0, i = 0, contr = 2, count = 0;
 float EWMA = 0.0;
-int Off_set = 435;
+int Off_set = 495;
 long startTime, recordTime ;
 FSInfo fs_info;
 File file;
 ESP8266WebServer server(80);
+DynamicJsonBuffer jsonBuffer;
+JsonObject& root = jsonBuffer.createObject();
+//JsonArray& valor = root.createNestedArray("valor");
 
 void tCallback(void *tCall){
     _timeout = true;
@@ -46,11 +51,11 @@ void setup() {
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
   WiFi.softAP("ESP Brux Mestrado");
-   
+   //delay(100);
   // Start the server
 
   server.on ( "/mestrado/6", []() {
-    server.send ( 200, "application/json", "{\"comando\":\"0\",\"nome\":\"Rafael\",\"idade\":23,\"peso\":77,\"valor\":20}" );
+    server.send ( 200, "application/json", "{\n \"time\": \"02:41:48 PM\",\n \"milliseconds_since_epoch\": 1525876908085,\n \"date\": \"05-09-2018\"\n}" );
   } ); 
   server.on("/mestrado/inf",infos);
   server.on("/mestrado/del",deleteFile);
@@ -59,6 +64,8 @@ void setup() {
   server.on("/mestrado/dir",diretorio);
   server.on("/mestrado/read",lerArquivo);
   server.on("/mestrado/go",capturar);
+  server.on("/mestrado/json2",json2);
+  server.on("/mestrado/json3",json3);
   server.begin();
 
   ArduinoOTA.onStart([]() {
@@ -86,36 +93,20 @@ void setup() {
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
+  
 }
 
 void loop() {
   server.handleClient();
   ArduinoOTA.handle();
+  /*if(!cap){
+    EMG();
+    delay(50);
+    }*/
+  
   if(cap){
       EMG();
       if (_timeout){
-        /*count = count + 1;
-        recordTime = millis();
-        Serial.print("Gravando");
-        Serial.print("   Tempo decorrido:");
-        Serial.print(millis() - startTime);
-        SPIFFS.info(fs_info);
-        Serial.print("    TotalBytes:");
-        Serial.print(fs_info.totalBytes);
-        Serial.print("    Tamanho do arquivo:");
-        Serial.print(fs_info.usedBytes);
-        Serial.print("    BlockSize:");
-        Serial.print(fs_info.blockSize);
-        Serial.print("    Page Size:");
-        Serial.print(fs_info.pageSize);
-        Serial.print("    MaxOpenFiles:");
-        Serial.print(fs_info.maxOpenFiles);
-        Serial.print("    MaxPathLength:");
-        Serial.print(fs_info.maxPathLength);
-        Serial.print("    Size File:");
-        Serial.print(file.size());
-        Serial.print("    Numero de gravações:");
-        Serial.println(count);*/
         if(EWMA > 0){
           writeFile(String(round(EWMA)));
         }
@@ -124,7 +115,7 @@ void loop() {
           }
         _timeout = false;
       }
-      yield(); //um putosegundo soh pra respirar
+      yield();
   }
     if(!digitalRead(WakeUp)&& contr==1){
       //Serial.println("Ligar WIFI");
@@ -135,6 +126,10 @@ void loop() {
       contr = 2;
       file.close();
     }  
+    /*if(!digitalRead(WakeUp)){
+      cap = false;
+      delay(50);
+      }*/
     
 }
 
@@ -179,28 +174,46 @@ void dados(){
   server.send(200, "text/html", "Criando buffer json");
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
-  root["comando"] = "0";
+  /*root["comando"] = "0";
   root["nome"] = "Rafael";
   root["idade"] = "23";
   root["peso"] = "77";
-  root["tipo"] = "Humano";
+  root["tipo"] = "Humano";*/
   JsonArray& valor = root.createNestedArray("valor");
+  JsonArray& valor2 = root.createNestedArray("valor2");
+  
   File rFile = SPIFFS.open("/log.txt","r");
-  //Serial.println("Reading file...");
+  Serial.println("Reading file...");
+  int i = 0;
   while(rFile.available()) {
     String line = rFile.readStringUntil(',');
     //Serial.println(line);
     valor.add(line);
+    valor2.add(String(i));
+    Serial.println(i);
+    i = i + 1;
   }
+}
+
+void json2(void){
 
   String jsonout;
   root.printTo(jsonout);
-  //Serial.print(jsonout);
-  Serial.println("Enviando json");
-  Serial.println(jsonout);
   server.send(200, "application/json", jsonout);
-  Serial.println("Json enviada");
-  
+  //for(int k = 0; k < valor.size(); k++)
+  //  valor.remove(k);
+    
+//  root.remove("valor");
+//  JsonArray& valor = root.createNestedArray("valor"); 
+}
+void json3(void){
+  EMG();
+//  valor.add(String(EWMA));
+  root["valor"] = String(round(EWMA));
+  String jsonout;
+  root.printTo(jsonout);
+  server.send(200, "application/json", jsonout);
+  //valor.remove(0);
 }
 
 void formatFS(void){
@@ -319,7 +332,6 @@ void writeResponse(WiFiClient& client, JsonObject& json) {
   client.println("Content-Type: application/json");
   client.println("Connection: close");
   client.println();
-
   json.prettyPrintTo(client);
 }
 
@@ -330,7 +342,11 @@ void EMG(void){
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  Serial.println((EWMA));  //imprime o valor da EWMA
+  //Serial.println((EWMA));  //imprime o valor da EWMA
+  //valor.add(EWMA);
   //writeFile(String(EWMA));
+  /*if(valor.size())
+    for(int k = 0; k < valor.size(); k++)
+      valor.remove(k);*/
 }
 
