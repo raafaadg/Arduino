@@ -30,7 +30,7 @@ File file;
 ESP8266WebServer server(80);
 DynamicJsonBuffer jsonBuffer;
 JsonObject& root = jsonBuffer.createObject();
-//JsonArray& valor = root.createNestedArray("valor");
+JsonArray& valor = root.createNestedArray("valor");
 
 void tCallback(void *tCall){
     _timeout = true;
@@ -126,10 +126,10 @@ void loop() {
       contr = 2;
       file.close();
     }  
-    /*if(!digitalRead(WakeUp)){
-      cap = false;
+    if(!digitalRead(WakeUp)){
+      EMG();
       delay(50);
-      }*/
+      }
     
 }
 
@@ -207,11 +207,13 @@ void json2(void){
 //  JsonArray& valor = root.createNestedArray("valor"); 
 }
 void json3(void){
-  EMG();
+  //EMG();
   //root["valor"] = random(30,60);
   String jsonout;
   root.printTo(jsonout);
   server.send(200, "application/json", jsonout);
+  for(int k = 0; k < valor.size(); k++){
+    valor.remove(k);}
   //valor.remove(0);
 }
 
@@ -341,12 +343,12 @@ void EMG(void){
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  Serial.println((EWMA));  //imprime o valor da EWMA
-  root["valor"] = round(EWMA);
-  //valor.add(EWMA);
+  //Serial.println((EWMA));  //imprime o valor da EWMA
+  //root["valor"] = round(EWMA);
+  valor.add(round(EWMA));
   //writeFile(String(EWMA));
-  /*if(valor.size())
+  if(valor.size()>99)
     for(int k = 0; k < valor.size(); k++)
-      valor.remove(k);*/
+      valor.remove(k);
 }
 
