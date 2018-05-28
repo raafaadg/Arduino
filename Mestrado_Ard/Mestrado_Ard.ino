@@ -20,7 +20,7 @@ static os_timer_t mTimer;
 bool cap = false, _timeout = false;
 String buf,buf2;
 const int AnalogIn  = A0;
-const int WakeUp = 5;
+const int WakeUp = D1;
 int ADread = 0, mod = 0, i = 0, contr = 2, count = 0;
 float EWMA = 0.0;
 int Off_set = 495;
@@ -31,6 +31,10 @@ ESP8266WebServer server(80);
 DynamicJsonBuffer jsonBuffer;
 JsonObject& root = jsonBuffer.createObject();
 JsonArray& valor = root.createNestedArray("valor");
+
+void returnOK() {
+  server.send(200, "text/plain", "");
+}
 
 void tCallback(void *tCall){
     _timeout = true;
@@ -53,7 +57,7 @@ void setup() {
   WiFi.softAP("ESP Brux Mestrado");
    //delay(100);
   // Start the server
-
+  MDNS.begin("bruxismo");
   server.on ( "/mestrado/6", []() {
     server.send ( 200, "application/json", "{\n \"time\": \"02:41:48 PM\",\n \"milliseconds_since_epoch\": 1525876908085,\n \"date\": \"05-09-2018\"\n}" );
   } ); 
@@ -66,6 +70,8 @@ void setup() {
   server.on("/mestrado/go",capturar);
   server.on("/mestrado/json2",json2);
   server.on("/mestrado/json3",json3);
+  server.on("/edit", handleFileUpload);
+  server.onNotFound(handleNotFound);
   server.begin();
 
   ArduinoOTA.onStart([]() {
@@ -94,6 +100,21 @@ void setup() {
   });
   ArduinoOTA.begin();
   
+}
+
+void handleNotFound(){
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET)?"GET":"POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i=0; i<server.args(); i++){
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
 }
 
 void loop() {
@@ -126,19 +147,60 @@ void loop() {
       contr = 2;
       file.close();
     }  
-    if(!digitalRead(WakeUp)){
+    /*if(!digitalRead(WakeUp)){
       EMG();
       delay(50);
-      }
+      }*/
     
+}
+void handleFileUpload(){ // upload a new file to the SPIFFS
+  HTTPUpload& upload = server.upload();
+  if(upload.status == UPLOAD_FILE_START){
+    String filename = upload.filename;
+    if(!filename.startsWith("/")) filename = "/"+filename;
+    Serial.print("handleFileUpload Name: "); Serial.println(filename);
+    file = SPIFFS.open(filename, "w");            // Open the file for writing in SPIFFS (create if it doesn't exist)
+    filename = String();
+  } else if(upload.status == UPLOAD_FILE_WRITE){
+    if(file)
+      file.write(upload.buf, upload.currentSize); // Write the received bytes to the file
+  } else if(upload.status == UPLOAD_FILE_END){
+    if(file) {                                    // If the file was successfully created
+      file.close();                               // Close the file again
+      Serial.print("handleFileUpload Size: "); Serial.println(upload.totalSize);
+      server.sendHeader("Location","/success.html");      // Redirect the client to the success page
+      server.send(303);
+    } else {
+      server.send(500, "text/plain", "500: couldn't create file");
+    }
+  }
 }
 
 void diretorio(void){
-  server.send(200, "text/html", "Diretórios existentes");
+  char dir[400];
   Dir dirr = SPIFFS.openDir("/");
   while(dirr.next()){
     Serial.printf("%s - %u bytes\n", dirr.fileName().c_str(), dirr.fileSize());
     }
+    /*snprintf ( dir, 400,
+
+"<html>\
+  <head>\
+    <meta http-equiv='refresh' content='5'/>\
+    <title>ESP8266 Diretorio</title>\
+    <style>\
+      body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
+    </style>\
+  </head>\
+  <body>\
+    <h1>Tamanho do Arquivo de texto</h1>\
+    <p>%s: %u %s</p>\
+  </body>\
+</html>",
+
+    dirr.fileName().c_str(), dirr.fileSize(), "bytes"
+  );
+  server.send ( 200, "text/html", dir );*/
   }
 
 void infos(void){
@@ -343,7 +405,7 @@ void EMG(void){
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
-  //Serial.println((EWMA));  //imprime o valor da EWMA
+  Serial.println((EWMA));  //imprime o valor da EWMA
   //root["valor"] = round(EWMA);
   valor.add(round(EWMA));
   //writeFile(String(EWMA));
