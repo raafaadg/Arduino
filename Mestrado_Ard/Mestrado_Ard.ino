@@ -70,7 +70,7 @@ void setup() {
   server.on("/mestrado/go",capturar);
   server.on("/mestrado/json2",json2);
   server.on("/mestrado/json3",json3);
-  server.on("/edit", handleFileUpload);
+  server.on("/edit", handleFileRead);
   server.onNotFound(handleNotFound);
   server.begin();
 
@@ -151,29 +151,24 @@ void loop() {
       EMG();
       delay(50);
       }*/
-    
 }
-void handleFileUpload(){ // upload a new file to the SPIFFS
-  HTTPUpload& upload = server.upload();
-  if(upload.status == UPLOAD_FILE_START){
-    String filename = upload.filename;
-    if(!filename.startsWith("/")) filename = "/"+filename;
-    Serial.print("handleFileUpload Name: "); Serial.println(filename);
-    file = SPIFFS.open(filename, "w");            // Open the file for writing in SPIFFS (create if it doesn't exist)
-    filename = String();
-  } else if(upload.status == UPLOAD_FILE_WRITE){
-    if(file)
-      file.write(upload.buf, upload.currentSize); // Write the received bytes to the file
-  } else if(upload.status == UPLOAD_FILE_END){
-    if(file) {                                    // If the file was successfully created
-      file.close();                               // Close the file again
-      Serial.print("handleFileUpload Size: "); Serial.println(upload.totalSize);
-      server.sendHeader("Location","/success.html");      // Redirect the client to the success page
-      server.send(303);
-    } else {
-      server.send(500, "text/plain", "500: couldn't create file");
-    }
-  }
+
+String getContentType(String filename) { // convert the file extension to the MIME type
+  if (filename.endsWith(".html")) return "text/html";
+  else if (filename.endsWith(".css")) return "text/css";
+  else if (filename.endsWith(".js")) return "application/javascript";
+  else if (filename.endsWith(".ico")) return "image/x-icon";
+  else if (filename.endsWith(".gz")) return "application/x-gzip";
+  return "text/plain";
+}
+
+void handleFileRead(void) { // send the right file to the client (if it exists)
+  Serial.println("handleFileRead: ");
+    File file = SPIFFS.open("/log.txt", "r"); 
+    // Open the file
+    size_t sent = server.streamFile(file, "text/html");    // Send it to the client
+    file.close();                                          // Close the file again
+
 }
 
 void diretorio(void){
@@ -186,7 +181,7 @@ void diretorio(void){
 
 "<html>\
   <head>\
-    <meta http-equiv='refresh' content='5'/>\
+    <meta/>\
     <title>ESP8266 Diretorio</title>\
     <style>\
       body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
@@ -199,19 +194,40 @@ void diretorio(void){
 </html>",
 
     dirr.fileName().c_str(), dirr.fileSize(), "bytes"
-  );
-  server.send ( 200, "text/html", dir );*/
+  );*/
+  
+  buf="";
+  buf2="";
+  buf+= "<html>";
+  buf+= "<head>";
+  buf+= "<meta/>";
+  buf+= "<title>ESP8266 Diretorio</title>";
+  buf+= "<style>";
+  buf+= "body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }";
+  buf+= "</style>";
+  buf+= "</head>";
+  buf+= "<body>";
+  buf+= "<h1>Tamanho do Arquivo de texto</h1>";
+  //buf2 = sprintf("<p>%s: %u %s</p>",dirr.fileName().c_str(),dirr.fileSize(),"bytes");
+  //buf+= buf2;
+  //buf+= "<p>"+dirr.fileName().c_str()+": "+String(dirr.fileSize())+" bytes</p>";
+  buf+= "</body>";
+  buf+= "</html>";
+  
+  server.send ( 200, "text/html", buf );
   }
 
 void infos(void){
     File rFile = SPIFFS.open("/log.txt","r");
     buf = "";
+    //buf += "<html>";
     buf += "<h3 style=""text-align: center;"">Enviando informações sobre o ESP e arquivo</h3>";
     buf += "<p>";
     buf += "<h2 style=""text-align: center;"">Tamanho do Arquivo</h3>";
     buf += rFile.size();
     buf += "</p>";
-    buf += "</html>\n";
+    buf += "</html>";
+    server.send ( 200, "text/html", buf );
     rFile.close();
   }
 void capturar(){
