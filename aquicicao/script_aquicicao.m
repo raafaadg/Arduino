@@ -4,10 +4,8 @@ clear;close all;clc
 % x = fscanf(fileID,'%f');
 % fclose(fileID);
 
-fileID = fopen('teste.txt','r');
-xx = fscanf(fileID,'%d,');
+fileID = fopen('teste4.txt','r');
+x = fscanf(fileID,'%d,');
 fclose(fileID);
 
-% plot(x)
-%figure
-%plot(xx)
+plot(x)
