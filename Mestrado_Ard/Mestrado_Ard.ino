@@ -437,6 +437,7 @@ void EMG(void){
 
   for (i = 0; i < 2200; i++){
 <<<<<<< HEAD
+<<<<<<< HEAD
 //  ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
 //  mod = abs (ADread);  //calcula o módulo da leitura do AD
   mod = abs (10);  //calcula o módulo da leitura do AD
@@ -444,11 +445,16 @@ void EMG(void){
   }
   //Serial.println((EWMA));  //imprime o valor da EWMA
 =======
+=======
+>>>>>>> parent of 7fd45fd... att
   ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
   mod = abs (ADread);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
   Serial.println((EWMA));  //imprime o valor da EWMA
+<<<<<<< HEAD
+>>>>>>> parent of 7fd45fd... att
+=======
 >>>>>>> parent of 7fd45fd... att
   //root["valor"] = round(EWMA);
   valor.add(round(EWMA));
