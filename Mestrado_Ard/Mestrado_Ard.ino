@@ -7,6 +7,8 @@
 #include <FS.h>
 #include "user_interface.h"
 #include <math.h>
+#include <Thread.h>
+#include <ThreadController.h>
 
 #define ssid      "TELECOM_LAMMI"        // WiFi SSID
 #define password  "schottky"    // WiFi password
@@ -17,6 +19,7 @@
 #define SPIFFS_CFG_LOG_BLOCK_SZ(ignore)   (65536)
 
 static os_timer_t mTimer;
+//static os_timer_t2 mTimer;
 bool cap = false, _timeout = false;
 String buf,buf2;
 const int AnalogIn  = A0;
@@ -46,8 +49,23 @@ void usrInit(void){
     os_timer_arm(&mTimer, 100, true);
 }
 
+ThreadController controll = ThreadController();
+Thread myThread = Thread();
+
+// callback for myThread
+void niceCallback(){
+    server.handleClient();
+}
+
+void timerCallback(){
+  controll.run();
+}
+
 void setup() {
   Serial.begin(115200);
+  
+  myThread.onRun(niceCallback);
+  
   pinMode(WakeUp, INPUT);
   //Abre o sistema de arquivos (mount)
   openFS();
@@ -119,6 +137,7 @@ void handleNotFound(){
 
 void loop() {
   server.handleClient();
+//  myThread.run();
   ArduinoOTA.handle();
   /*if(!cap){
     EMG();
@@ -385,11 +404,12 @@ void writeResponse(WiFiClient& client, JsonObject& json) {
 
 void EMG(void){
 
-//  for (i = 0; i < 2200; i++){
+  for (i = 0; i < 2200; i++){
 //  ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
 //  mod = abs (ADread);  //calcula o módulo da leitura do AD
-//  EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
-//  }
+  mod = abs (10);  //calcula o módulo da leitura do AD
+  EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
+  }
   //Serial.println((EWMA));  //imprime o valor da EWMA
   //root["valor"] = round(EWMA);
 //  valor.add(round(EWMA));
