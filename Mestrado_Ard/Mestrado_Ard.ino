@@ -21,9 +21,10 @@
 static os_timer_t mTimer;
 //static os_timer_t2 mTimer;
 bool cap = false, _timeout = false;
-String buf,buf2;
+String buf,buf2,jsonout;
 const int AnalogIn  = A0;
-const int WakeUp = D1;
+const int WakeUp = 5;
+//const int WakeUp = D1;
 int ADread = 0, mod = 0, i = 0, contr = 2, count = 0;
 float EWMA = 0.0;
 int Off_set = 495;
@@ -31,8 +32,9 @@ long startTime, recordTime ;
 FSInfo fs_info;
 File file;
 ESP8266WebServer server(80);
-DynamicJsonBuffer jsonBuffer;
-JsonObject& root = jsonBuffer.createObject();
+
+DynamicJsonDocument jsonBuffer;
+JsonObject& root = jsonBuffer.to<JsonObject>();
 JsonArray& valor = root.createNestedArray("valor");
 
 void returnOK() {
@@ -47,22 +49,22 @@ void usrInit(void){
     os_timer_arm(&mTimer, 100, true);
 }
 
-ThreadController controll = ThreadController();
-Thread myThread = Thread();
+//ThreadController controll = ThreadController();
+//Thread myThread = Thread();
 
 // callback for myThread
-void niceCallback(){
-    server.handleClient();
-}
+//void niceCallback(){
+//    server.handleClient();
+//}
 
-void timerCallback(){
-  controll.run();
-}
+//void timerCallback(){
+//  controll.run();
+//}
 
 void setup() {
   Serial.begin(115200);
   
-  myThread.onRun(niceCallback);
+  //myThread.onRun(niceCallback);
   
   pinMode(WakeUp, INPUT);
   //Abre o sistema de arquivos (mount)
@@ -81,12 +83,10 @@ void setup() {
   } ); 
   server.on("/mestrado/inf",infos);
   server.on("/mestrado/del",deleteFile);
-  server.on("/mestrado/data",dados);
   server.on("/mestrado/create",createFile);
   server.on("/mestrado/dir",diretorio);
   server.on("/mestrado/read",lerArquivo);
   server.on("/mestrado/go",capturar);
-  server.on("/mestrado/json2",json2);
   server.on("/mestrado/json3",json3);
   server.on("/edit", handleFileRead);
   server.onNotFound(handleNotFound);
@@ -166,10 +166,10 @@ void loop() {
       contr = 2;
       file.close();
     }  
-    /*if(!digitalRead(WakeUp)){
+    if(!digitalRead(WakeUp)){
       EMG();
-      delay(50);
-      }*/
+      delay(15);
+      }
 }
 
 String getContentType(String filename) { // convert the file extension to the MIME type
@@ -267,51 +267,18 @@ void capturar(){
    file = SPIFFS.open("/log.txt","a");
    //startTime = millis();
   }
-void dados(){
-  server.send(200, "text/html", "Criando buffer json");
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& root = jsonBuffer.createObject();
-  /*root["comando"] = "0";
-  root["nome"] = "Rafael";
-  root["idade"] = "23";
-  root["peso"] = "77";
-  root["tipo"] = "Humano";*/
-  JsonArray& valor = root.createNestedArray("valor");
-  JsonArray& valor2 = root.createNestedArray("valor2");
-  
-  File rFile = SPIFFS.open("/log.txt","r");
-  Serial.println("Reading file...");
-  int i = 0;
-  while(rFile.available()) {
-    String line = rFile.readStringUntil(',');
-    //Serial.println(line);
-    valor.add(line);
-    valor2.add(String(i));
-    Serial.println(i);
-    i = i + 1;
-  }
-}
 
-void json2(void){
-
-  String jsonout;
-  root.printTo(jsonout);
-  server.send(200, "application/json", jsonout);
-  //for(int k = 0; k < valor.size(); k++)
-  //  valor.remove(k);
-    
-//  root.remove("valor");
-//  JsonArray& valor = root.createNestedArray("valor"); 
-}
 void json3(void){
   //EMG();
   //root["valor"] = random(30,60);
-  String jsonout;
-  root.printTo(jsonout);
+  jsonout = "";
+  serializeJson(root,jsonout);
+  //serializeJson(root,Serial);
+  //Serial.println("");
   server.send(200, "application/json", jsonout);
-  for(int k = 0; k < valor.size(); k++){
-    valor.remove(k);}
-  //valor.remove(0);
+  jsonBuffer.clear();
+  JsonObject& root = jsonBuffer.to<JsonObject>();
+  JsonArray& valor = root.createNestedArray("valor");
 }
 
 void formatFS(void){
@@ -430,37 +397,24 @@ void writeResponse(WiFiClient& client, JsonObject& json) {
   client.println("Content-Type: application/json");
   client.println("Connection: close");
   client.println();
-  json.prettyPrintTo(client);
+  serializeJsonPretty(json,client);
 }
 
 void EMG(void){
-
-  for (i = 0; i < 2200; i++){
-<<<<<<< HEAD
-<<<<<<< HEAD
-//  ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
-//  mod = abs (ADread);  //calcula o módulo da leitura do AD
-  mod = abs (10);  //calcula o módulo da leitura do AD
-  EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
-  }
+//  for (i = 0; i < 1000; i++){
+//    ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
+//    mod = abs (ADread);  //calcula o módulo da leitura do AD
+//    EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
+//  }
   //Serial.println((EWMA));  //imprime o valor da EWMA
-=======
-=======
->>>>>>> parent of 7fd45fd... att
-  ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
-  mod = abs (ADread);  //calcula o módulo da leitura do AD
-  EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
-  }
-  Serial.println((EWMA));  //imprime o valor da EWMA
-<<<<<<< HEAD
->>>>>>> parent of 7fd45fd... att
-=======
->>>>>>> parent of 7fd45fd... att
-  //root["valor"] = round(EWMA);
-  valor.add(round(EWMA));
+  valor.add(analogRead(AnalogIn));
+//  valor.add(round(EWMA));
   //writeFile(String(EWMA));
-  if(valor.size()>99)
-    for(int k = 0; k < valor.size(); k++)
-      valor.remove(k);
+  int j = valor.size();
+  if(j>99){
+    jsonBuffer.clear();     
+    JsonObject& root = jsonBuffer.to<JsonObject>();
+    JsonArray& valor = root.createNestedArray("valor");
+  }
 }
 
