@@ -24,7 +24,6 @@ bool cap = false, _timeout = false;
 String buf,buf2;
 const int AnalogIn  = A0;
 const int WakeUp = D1;
-//const int WakeUp = 5;
 int ADread = 0, mod = 0, i = 0, contr = 2, count = 0;
 float EWMA = 0.0;
 int Off_set = 495;
@@ -33,7 +32,6 @@ FSInfo fs_info;
 File file;
 ESP8266WebServer server(80);
 DynamicJsonBuffer jsonBuffer;
-//StaticJsonBuffer<1000> jsonBuffer;
 JsonObject& root = jsonBuffer.createObject();
 JsonArray& valor = root.createNestedArray("valor");
 
@@ -74,7 +72,7 @@ void setup() {
   
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
-  WiFi.softAP("ESP Node Mestrado");
+  WiFi.softAP("ESP Brux Mestrado");
    //delay(100);
   // Start the server
   MDNS.begin("bruxismo");
@@ -83,15 +81,17 @@ void setup() {
   } ); 
   server.on("/mestrado/inf",infos);
   server.on("/mestrado/del",deleteFile);
+  server.on("/mestrado/data",dados);
   server.on("/mestrado/create",createFile);
   server.on("/mestrado/dir",diretorio);
   server.on("/mestrado/read",lerArquivo);
   server.on("/mestrado/go",capturar);
+  server.on("/mestrado/json2",json2);
   server.on("/mestrado/json3",json3);
   server.on("/edit", handleFileRead);
   server.onNotFound(handleNotFound);
   server.begin();
-  
+
   ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH)
@@ -117,7 +117,7 @@ void setup() {
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
-  startTime = millis();
+  
 }
 
 void handleNotFound(){
@@ -158,7 +158,7 @@ void loop() {
       yield();
   }
     if(!digitalRead(WakeUp)&& contr==1){
-      Serial.println("Ligar WIFI");
+      //Serial.println("Ligar WIFI");
       WiFi.forceSleepWake();
       WiFi.mode(WIFI_AP);
       delay(100);
@@ -166,11 +166,10 @@ void loop() {
       contr = 2;
       file.close();
     }  
-    if(!digitalRead(WakeUp)){
-      //Serial.println("Lendo EMG");
+    /*if(!digitalRead(WakeUp)){
       EMG();
       delay(50);
-      }
+      }*/
 }
 
 String getContentType(String filename) { // convert the file extension to the MIME type
@@ -266,21 +265,53 @@ void capturar(){
    WiFi.forceSleepBegin(); //entra no modo Sleep
    delay(100);
    file = SPIFFS.open("/log.txt","a");
-   
+   //startTime = millis();
   }
+void dados(){
+  server.send(200, "text/html", "Criando buffer json");
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  /*root["comando"] = "0";
+  root["nome"] = "Rafael";
+  root["idade"] = "23";
+  root["peso"] = "77";
+  root["tipo"] = "Humano";*/
+  JsonArray& valor = root.createNestedArray("valor");
+  JsonArray& valor2 = root.createNestedArray("valor2");
+  
+  File rFile = SPIFFS.open("/log.txt","r");
+  Serial.println("Reading file...");
+  int i = 0;
+  while(rFile.available()) {
+    String line = rFile.readStringUntil(',');
+    //Serial.println(line);
+    valor.add(line);
+    valor2.add(String(i));
+    Serial.println(i);
+    i = i + 1;
+  }
+}
 
-void json3(void){
-  Serial.println(millis()-startTime);
+void json2(void){
+
   String jsonout;
   root.printTo(jsonout);
   server.send(200, "application/json", jsonout);
-  jsonBuffer.clear();
-  JsonObject& root = jsonBuffer.createObject();
-  JsonArray& valor = root.createNestedArray("valor");
-  startTime = millis();
-//    Serial.print("tempo final: ");
-//    Serial.println(millis());
-//    Serial.println(millis()-startTime);
+  //for(int k = 0; k < valor.size(); k++)
+  //  valor.remove(k);
+    
+//  root.remove("valor");
+//  JsonArray& valor = root.createNestedArray("valor"); 
+}
+void json3(void){
+  //EMG();
+  //root["valor"] = random(30,60);
+  String jsonout;
+  root.printTo(jsonout);
+  server.send(200, "application/json", jsonout);
+  for(int k = 0; k < valor.size(); k++){
+    valor.remove(k);}
+  //valor.remove(0);
 }
 
 void formatFS(void){
@@ -405,21 +436,25 @@ void writeResponse(WiFiClient& client, JsonObject& json) {
 void EMG(void){
 
   for (i = 0; i < 2200; i++){
+<<<<<<< HEAD
 //  ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
 //  mod = abs (ADread);  //calcula o módulo da leitura do AD
   mod = abs (10);  //calcula o módulo da leitura do AD
   EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
   //Serial.println((EWMA));  //imprime o valor da EWMA
-  //root["valor"] = round(EWMA);
-//  valor.add(round(EWMA));
-  valor.add(analogRead(AnalogIn));
-  //writeFile(String(EWMA));
-  int j = valor.size();
-  if(j>99){
-    jsonBuffer.clear();     
-    JsonObject& root = jsonBuffer.createObject();
-    JsonArray& valor = root.createNestedArray("valor"); 
+=======
+  ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
+  mod = abs (ADread);  //calcula o módulo da leitura do AD
+  EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
   }
+  Serial.println((EWMA));  //imprime o valor da EWMA
+>>>>>>> parent of 7fd45fd... att
+  //root["valor"] = round(EWMA);
+  valor.add(round(EWMA));
+  //writeFile(String(EWMA));
+  if(valor.size()>99)
+    for(int k = 0; k < valor.size(); k++)
+      valor.remove(k);
 }
 
