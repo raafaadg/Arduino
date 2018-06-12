@@ -7,8 +7,8 @@
 #include <FS.h>
 #include "user_interface.h"
 #include <math.h>
-#include <Thread.h>
-#include <ThreadController.h>
+//#include <Thread.h>
+//#include <ThreadController.h>
 
 #define ssid      "TELECOM_LAMMI"        // WiFi SSID
 #define password  "schottky"    // WiFi password
@@ -23,8 +23,8 @@ static os_timer_t mTimer;
 bool cap = false, _timeout = false;
 String buf,buf2,jsonout;
 const int AnalogIn  = A0;
-const int WakeUp = 5;
-//const int WakeUp = D1;
+//const int WakeUp = 5;
+const int WakeUp = D1;
 int ADread = 0, mod = 0, i = 0, contr = 2, count = 0;
 float EWMA = 0.0;
 int Off_set = 495;
@@ -74,7 +74,8 @@ void setup() {
   
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
-  WiFi.softAP("ESP Brux Mestrado");
+//  WiFi.softAP("ESP Brux Mestrado");
+  WiFi.softAP("ESP Node Mestrado");
    //delay(100);
   // Start the server
   MDNS.begin("bruxismo");
@@ -145,7 +146,7 @@ void loop() {
     }*/
   
   if(cap){
-      EMG();
+      EMG(2200);
       if (_timeout){
         if(EWMA > 0){
           writeFile(String(round(EWMA)));
@@ -166,10 +167,12 @@ void loop() {
       contr = 2;
       file.close();
     }  
+    else{
     if(!digitalRead(WakeUp)){
-      EMG();
-      delay(15);
+      EMG(500);
+      delay(80);
       }
+    }
 }
 
 String getContentType(String filename) { // convert the file extension to the MIME type
@@ -400,18 +403,20 @@ void writeResponse(WiFiClient& client, JsonObject& json) {
   serializeJsonPretty(json,client);
 }
 
-void EMG(void){
-//  for (i = 0; i < 1000; i++){
-//    ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
-//    mod = abs (ADread);  //calcula o módulo da leitura do AD
-//    EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
-//  }
-  //Serial.println((EWMA));  //imprime o valor da EWMA
-  valor.add(analogRead(AnalogIn));
-//  valor.add(round(EWMA));
-  //writeFile(String(EWMA));
-  int j = valor.size();
-  if(j>99){
+void EMG(int control){
+  for (i = 0; i < control; i++){
+    ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
+    mod = abs (ADread);  //calcula o módulo da leitura do AD
+    EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
+    
+  }
+//  Serial.println((EWMA));  //imprime o valor da EWMA
+  valor.add(round(EWMA));
+//  Serial.println(analogRead(AnalogIn));  //imprime o valor da EWMA
+//  valor.add(analogRead(AnalogIn));
+ 
+  //writeFile(String(round(EWMA)));
+  if(valor.size() > 99){
     jsonBuffer.clear();     
     JsonObject& root = jsonBuffer.to<JsonObject>();
     JsonArray& valor = root.createNestedArray("valor");
