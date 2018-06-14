@@ -23,8 +23,13 @@ static os_timer_t mTimer;
 bool cap = false, _timeout = false;
 String buf,buf2,jsonout;
 const int AnalogIn  = A0;
-//const int WakeUp = 5;
+
+const char* nomeSSID = "ESP Node Mestrado";
 const int WakeUp = D1;
+
+//const char* nomeSSID = "ESP Brux Mestrado";
+//const int WakeUp = 5;
+
 int ADread = 0, mod = 0, i = 0, contr = 2, count = 0;
 float EWMA = 0.0;
 int Off_set = 495;
@@ -75,7 +80,7 @@ void setup() {
   WiFi.mode(WIFI_AP);
   //WiFi.begin(ssid, password);
 //  WiFi.softAP("ESP Brux Mestrado");
-  WiFi.softAP("ESP Node Mestrado");
+  WiFi.softAP(nomeSSID);
    //delay(100);
   // Start the server
   MDNS.begin("bruxismo");
@@ -89,7 +94,8 @@ void setup() {
   server.on("/mestrado/read",lerArquivo);
   server.on("/mestrado/go",capturar);
   server.on("/mestrado/json3",json3);
-  server.on("/edit", handleFileRead);
+  server.on("/mestrado/tele",telemetria);
+  server.on("/mestrado/edit", handleFileRead);
   server.onNotFound(handleNotFound);
   server.begin();
 
@@ -170,9 +176,26 @@ void loop() {
     else{
     if(!digitalRead(WakeUp)){
       EMG(500);
-      delay(80);
+      delay(15);
       }
     }
+}
+
+void telemetria(void){
+  DynamicJsonDocument jsonTele;
+  JsonObject& root = jsonTele.to<JsonObject>();
+  root.set<const char*>("nomeSSID",nomeSSID);
+  root.set<float>("bateria",4.2);
+  Dir dirr = SPIFFS.openDir("/");
+  while(dirr.next()){
+    root.set<String>("nomeArquivo",dirr.fileName().c_str());
+    root.set<int>("tamanhoArquivo",dirr.fileSize());
+  }
+  
+  serializeJsonPretty(root, Serial);
+  jsonout = "";
+  serializeJson(root,jsonout);
+  server.send(200, "application/json", jsonout);
 }
 
 String getContentType(String filename) { // convert the file extension to the MIME type
@@ -404,16 +427,16 @@ void writeResponse(WiFiClient& client, JsonObject& json) {
 }
 
 void EMG(int control){
-  for (i = 0; i < control; i++){
-    ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
-    mod = abs (ADread);  //calcula o módulo da leitura do AD
-    EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
-    
-  }
+//  for (i = 0; i < control; i++){
+//    ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
+//    mod = abs (ADread);  //calcula o módulo da leitura do AD
+//    EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
+//    
+//  }
 //  Serial.println((EWMA));  //imprime o valor da EWMA
-  valor.add(round(EWMA));
+//  valor.add(round(EWMA));
 //  Serial.println(analogRead(AnalogIn));  //imprime o valor da EWMA
-//  valor.add(analogRead(AnalogIn));
+  valor.add(analogRead(AnalogIn));
  
   //writeFile(String(round(EWMA)));
   if(valor.size() > 99){
