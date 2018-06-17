@@ -66,6 +66,11 @@ void usrInit(void){
 //  controll.run();
 //}
 
+WiFiUDP Udp;
+unsigned int localUdpPort = 4210;
+char incomingPacket[255];
+char replyPacket[] = "Hi there! Got the message :-)";
+String req;
 void setup() {
   Serial.begin(115200);
   
@@ -124,7 +129,7 @@ void setup() {
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
-  
+  Udp.begin(localUdpPort);
 }
 
 void handleNotFound(){
@@ -176,8 +181,34 @@ void loop() {
     else{
     if(!digitalRead(WakeUp)){
       EMG(500);
+      listen();
       delay(15);
       }
+    }
+}
+
+void listen()//Sub-rotina que verifica se há pacotes UDP's para serem lidos.
+{
+  //Serial.println("LENDO UDP");
+   if (Udp.parsePacket() > 0)//Se houver pacotes para serem lidos
+   {
+       Serial.println("RECEBEU ALGO");
+       req = "";//Reseta a string para receber uma nova informaçao
+       while (Udp.available() > 0)//Enquanto houver dados para serem lidos
+       {
+           char z = Udp.read();//Adiciona o byte lido em uma char
+           req += z;//Adiciona o char à string
+       }
+ 
+       //Após todos os dados serem lidos, a String estara pronta.
+ 
+       Serial.println(req);//Printa a string recebida no Serial monitor.
+       
+       Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+       jsonout = "";
+       serializeJson(root,jsonout);
+       Udp.println(jsonout);
+       Udp.endPacket();
     }
 }
 
@@ -439,6 +470,12 @@ void EMG(int control){
   valor.add(analogRead(AnalogIn));
  
   //writeFile(String(round(EWMA)));
+
+  /////////////UDP SEND//////////////////////////////////////
+//  Udp.beginPacket("192.168.4.2", localUdpPort);
+//  Udp.println(analogRead(AnalogIn));
+//  Udp.endPacket();
+  //////////////////////////////////////////////////////////
   if(valor.size() > 99){
     jsonBuffer.clear();     
     JsonObject& root = jsonBuffer.to<JsonObject>();
