@@ -7,8 +7,6 @@
 #include <FS.h>
 #include "user_interface.h"
 #include <math.h>
-//#include <Thread.h>
-//#include <ThreadController.h>
 
 #define ssid      "TELECOM_LAMMI"        // WiFi SSID
 #define password  "schottky"    // WiFi password
@@ -20,25 +18,28 @@
 
 static os_timer_t mTimer;
 //static os_timer_t2 mTimer;
-bool cap = false, _timeout = false;
+bool cap = false, _timeout = false, onlinegraph = false;
 String buf,buf2,jsonout;
 const int AnalogIn  = A0;
 
-const char* nomeSSID = "ESP Node Mestrado";
-const int WakeUp = D1;
+int ADread = 0, mod = 0, i = 0, contr = 2, count = 0, p = 0, Off_set = 495, vals[100];
+float EWMA = 0.0, batVal = 0.0;
+long startTime, recordTime, batValInt = 0;
+
+//const char* nomeSSID = "ESP Node Mestrado";
+//const int WakeUp = D1;
 
 const char* nomeSSID = "ESP Brux Mestrado";
+//const char* nomeSSID = "ESP Goiania NOVA SSID";
+//const char* nomeSSID = "ESP Brux V2";
 const int WakeUp = 5;
+
+//V1
 const int bat  = 4;
+//V2
+//const int bat  = 16;
 
-float batVal = 0.0;
-long batValInt = 0;
 
-int vals[100];
-int ADread = 0, mod = 0, i = 0, contr = 2, count = 0, p = 0;
-float EWMA = 0.0;
-int Off_set = 495;
-long startTime, recordTime ;
 FSInfo fs_info;
 File file;
 ESP8266WebServer server(80);
@@ -59,17 +60,6 @@ void usrInit(void){
     os_timer_arm(&mTimer, 100, true);
 }
 
-//ThreadController controll = ThreadController();
-//Thread myThread = Thread();
-
-// callback for myThread
-//void niceCallback(){
-//    server.handleClient();
-//}
-
-//void timerCallback(){
-//  controll.run();
-//}
 
 WiFiUDP Udp;
 unsigned int localUdpPort = 4210;
@@ -110,6 +100,8 @@ void setup() {
   server.on("/mestrado/edit", handleFileRead);
   server.on("/mestrado/on", gpio4On);
   server.on("/mestrado/off", gpio4Off);
+  server.on("/mestrado/online", online);
+  server.on("/mestrado/offline", offline);
   server.onNotFound(handleNotFound);
   server.begin();
 
@@ -141,9 +133,20 @@ void setup() {
   Udp.begin(localUdpPort);
 }
 
+void online(){
+  onlinegraph = true;
+  server.send ( 200, "text/html", "Online Habilitado");
+}
+
+void offline(){
+  onlinegraph = false;
+  server.send ( 200, "text/html", "Online Desabilitado");
+}
+
 void gpio4Off(){
   digitalWrite(bat,0);
-  server.send ( 200, "text/html", "GPIO OFF" );
+//  server.send ( 200, "text/html", "GPIO OFF" );
+  server.send ( 200, "text/html", String(millis()));
   }
   
 void gpio4On(){
@@ -215,13 +218,11 @@ void loop() {
       contr = 2;
       file.close();
     }  
-    else{
-    if(!digitalRead(WakeUp)){
-      EMG(500);
+    if(onlinegraph){
+      EMG(800);
 //      listen();
       delay(5);
       }
-    }
 }
 
 void listen()//Sub-rotina que verifica se há pacotes UDP's para serem lidos.
@@ -302,25 +303,7 @@ void diretorio(void){
   while(dirr.next()){
     Serial.printf("%s - %u bytes\n", dirr.fileName().c_str(), dirr.fileSize());
     }
-    /*snprintf ( dir, 400,
-
-"<html>\
-  <head>\
-    <meta/>\
-    <title>ESP8266 Diretorio</title>\
-    <style>\
-      body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
-    </style>\
-  </head>\
-  <body>\
-    <h1>Tamanho do Arquivo de texto</h1>\
-    <p>%s: %u %s</p>\
-  </body>\
-</html>",
-
-    dirr.fileName().c_str(), dirr.fileSize(), "bytes"
-  );*/
-  
+      
   buf="";
   buf2="";
   buf+= "<html>";
@@ -364,6 +347,7 @@ void capturar(){
   server.send(200, "text/html", buf);
   //Serial.println("Enviado comando de captura");
   cap = true;
+  onlinegraph = false;
   contr=1;
   //Serial.println("Desligar WIFI");
    //WiFi.disconnect();   //desconecta a conexão WiFi
@@ -375,12 +359,8 @@ void capturar(){
   }
 
 void json3(void){
-  //EMG();
-  //root["valor"] = random(30,60);
   jsonout = "";
   serializeJson(root,jsonout);
-  //serializeJson(root,Serial);
-  //Serial.println("");
   server.send(200, "application/json", jsonout);
   jsonBuffer.clear();
   JsonObject& root = jsonBuffer.to<JsonObject>();
@@ -454,16 +434,6 @@ void readFile(void) {
   while(rFile.available()) {
     String line = rFile.readStringUntil(',');
     Serial.println(line);
-//    buf += line;
-//    buf += ",";
-//    //buf += "<br />";
-//    buf2 += line;
-//    buf2 += "\n";
-//    count = count + 1;
-//    delay(1);
-    /*if(count == 500){
-      serial
-      }*/
   }
     //buf += "<br />";
   //Serial.println("Acabou a leitura");
