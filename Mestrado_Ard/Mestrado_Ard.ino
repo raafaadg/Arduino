@@ -29,15 +29,15 @@ long startTime, recordTime, batValInt = 0;
 //const char* nomeSSID = "ESP Node Mestrado";
 //const int WakeUp = D1;
 
-const char* nomeSSID = "ESP Brux Mestrado";
+//const char* nomeSSID = "ESP Brux Mestrado";
 //const char* nomeSSID = "ESP Goiania NOVA SSID";
-//const char* nomeSSID = "ESP Brux V2";
+const char* nomeSSID = "ESP Brux V2";
 const int WakeUp = 5;
 
 //V1
-const int bat  = 4;
+//const int bat  = 4;
 //V2
-//const int bat  = 16;
+const int bat  = 16;
 
 
 FSInfo fs_info;
@@ -45,8 +45,8 @@ File file;
 ESP8266WebServer server(80);
 
 DynamicJsonDocument jsonBuffer;
-JsonObject& root = jsonBuffer.to<JsonObject>();
-JsonArray& valor = root.createNestedArray("valor");
+JsonObject root = jsonBuffer.to<JsonObject>();
+JsonArray valor = root.createNestedArray("valor");
 
 void returnOK() {
   server.send(200, "text/plain", "");
@@ -264,7 +264,7 @@ void listen()//Sub-rotina que verifica se há pacotes UDP's para serem lidos.
 
 void telemetria(void){
   DynamicJsonDocument jsonTele;
-  JsonObject& root = jsonTele.to<JsonObject>();
+  JsonObject root = jsonTele.to<JsonObject>();
   root.set<const char*>("nomeSSID",nomeSSID);
   root.set<float>("bateria",4.2);
   Dir dirr = SPIFFS.openDir("/");
@@ -363,8 +363,8 @@ void json3(void){
   serializeJson(root,jsonout);
   server.send(200, "application/json", jsonout);
   jsonBuffer.clear();
-  JsonObject& root = jsonBuffer.to<JsonObject>();
-  JsonArray& valor = root.createNestedArray("valor");
+  JsonObject root = jsonBuffer.to<JsonObject>();
+  JsonArray valor = root.createNestedArray("valor");
 }
 
 void formatFS(void){
@@ -468,7 +468,7 @@ void lerArquivo(void){
   Serial.println("Leitura Finalizada");
 }
 
-void writeResponse(WiFiClient& client, JsonObject& json) {
+void writeResponse(WiFiClient& client, JsonObject json) {
   client.println("HTTP/1.1 200 OK");
   client.println("Content-Type: application/json");
   client.println("Connection: close");
@@ -497,8 +497,8 @@ void EMG(int control){
   //////////////////////////////////////////////////////////
   if(valor.size() > 99){
     jsonBuffer.clear();     
-    JsonObject& root = jsonBuffer.to<JsonObject>();
-    JsonArray& valor = root.createNestedArray("valor");
+    JsonObject root = jsonBuffer.to<JsonObject>();
+    JsonArray valor = root.createNestedArray("valor");
   }
   
 
