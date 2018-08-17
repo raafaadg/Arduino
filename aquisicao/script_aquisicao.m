@@ -4,9 +4,9 @@ clear;close all;clc
 % x = fscanf(fileID,'%f');
 % fclose(fileID);
 
-fileID = fopen('aquisicao12.txt','r');
+fileID = fopen('aquisicao13.txt','r');
 x = fscanf(fileID,'%d,');
-x=x-30;
+% x=x-30;
 for k=1:size(x,1)
     if x(k) < 0
         x(k) = 0;
