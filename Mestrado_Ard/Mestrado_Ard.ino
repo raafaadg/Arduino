@@ -29,15 +29,15 @@ long startTime, recordTime, batValInt = 0;
 //const char* nomeSSID = "ESP Node Mestrado";
 //const int WakeUp = D1;
 
-//const char* nomeSSID = "ESP Brux Mestrado";
+const char* nomeSSID = "ESP Brux Mestrado";
 //const char* nomeSSID = "ESP Goiania NOVA SSID";
-const char* nomeSSID = "ESP Brux V2";
+//const char* nomeSSID = "ESP Brux V2";
 const int WakeUp = 5;
 
 //V1
-//const int bat  = 4;
+const int bat  = 4;
 //V2
-const int bat  = 16;
+//const int bat  = 16;
 
 
 FSInfo fs_info;
@@ -72,7 +72,8 @@ void setup() {
   //myThread.onRun(niceCallback);
   
   pinMode(WakeUp, INPUT);
-  pinMode(bat, OUTPUT);
+  pinMode(bat, INPUT);
+  //pinMode(bat, OUTPUT);
   digitalWrite(bat,0);
   //Abre o sistema de arquivos (mount)
   openFS();
@@ -102,6 +103,7 @@ void setup() {
   server.on("/mestrado/off", gpio4Off);
   server.on("/mestrado/online", online);
   server.on("/mestrado/offline", offline);
+  server.on("/mestrado/bite", bite);
   server.onNotFound(handleNotFound);
   server.begin();
 
@@ -133,6 +135,17 @@ void setup() {
   Udp.begin(localUdpPort);
 }
 
+void bite(){
+  EMG(1500);
+  if(round(EWMA)>30){
+    server.send(200,"text/html","Morder");
+    EWMA = 25;
+  }
+   else
+       server.send(200,"text/html",String(round(EWMA)));
+
+    //server.send(200,"text/html","Inferior");
+}
 void online(){
   onlinegraph = true;
   server.send ( 200, "text/html", "Online Habilitado");
@@ -144,12 +157,14 @@ void offline(){
 }
 
 void gpio4Off(){
-  digitalWrite(bat,0);
+  pinMode(bat,INPUT);
+  //digitalWrite(bat,0);
 //  server.send ( 200, "text/html", "GPIO OFF" );
   server.send ( 200, "text/html", String(millis()));
   }
   
 void gpio4On(){
+  pinMode(bat,OUTPUT);
   digitalWrite(bat,1);
   delay(10);
   int k = 0;
@@ -488,13 +503,15 @@ void EMG(int control){
 //  Serial.println(analogRead(AnalogIn));  //imprime o valor da EWMA
   valor.add(analogRead(AnalogIn));
   //writeFile(String(round(EWMA)));
-
-  /////////////UDP SEND//////////////////////////////////////
-  Udp.beginPacket("192.168.4.2", localUdpPort);
-//  Udp.println(analogRead(AnalogIn));
-  Udp.println(round(EWMA));
-  Udp.endPacket();
-  //////////////////////////////////////////////////////////
+  
+  if(onlinegraph){
+    /////////////UDP SEND//////////////////////////////////////
+    Udp.beginPacket("192.168.4.2", localUdpPort);
+  //  Udp.println(analogRead(AnalogIn));
+    Udp.println(round(EWMA));
+    Udp.endPacket();
+    //////////////////////////////////////////////////////////
+  }
   if(valor.size() > 99){
     jsonBuffer.clear();     
     JsonObject root = jsonBuffer.to<JsonObject>();
