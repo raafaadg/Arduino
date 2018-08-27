@@ -28,15 +28,16 @@ long startTime, recordTime, batValInt = 0;
 //const char* nomeSSID = "ESP Node Mestrado";
 //const int WakeUp = D1;
 
-const char* nomeSSID = "ESP Brux Mestrado";
+//const char* nomeSSID = "ESP Brux Mestrado";
 //const char* nomeSSID = "ESP Goiania NOVA SSID";
-//const char* nomeSSID = "ESP Brux V2";
+const char* nomeSSID = "ESP Brux V2";
+
 const int WakeUp = 5;
 
 //V1
-const int bat  = 4;
+//const int bat  = 4;
 //V2
-//const int bat  = 16;
+const int bat  = 16;
 
 
 FSInfo fs_info;
@@ -61,7 +62,7 @@ void usrInit(void){
 
 
 WiFiUDP Udp;
-unsigned int localUdpPort = 4210;
+unsigned int localUdpPort = 4200;
 char incomingPacket[255];
 char replyPacket[] = "Hi there! Got the message :-)";
 String req;
@@ -148,22 +149,21 @@ void ts() {
 }
 
 void bite(){
-  EMG(1500);
-  if(round(EWMA)>30){
-    server.send(200,"text/html","Morder");
-    EWMA = 25;
-  }
-   else
-       server.send(200,"text/html",String(round(EWMA)));
-
-    //server.send(200,"text/html","Inferior");
+//  EMG(1000);
+  server.send(200,"text/html","Morder");
+//  if(round(EWMA)>30){
+//    server.send(200,"text/html","Morder");
+//    EWMA = 5;
+//  }
+//   else
+//    server.send(200,"text/html",String(round(EWMA)));
 }
 void online(){
-  String aux = server.arg("IP");
+  //String aux = server.arg("IP");
   //server.arg("IP").toCharArray(ip,sizeof(ip));
   //ip = aux.c_str();
   onlinegraph = true;
-  server.send ( 200, "text/html", ip);
+  server.send ( 200, "text/html", "Online Habilitado");
 }
 
 void offline(){
@@ -219,13 +219,8 @@ void handleNotFound(){
 
 void loop() {
   server.handleClient();
-//  myThread.run();
   ArduinoOTA.handle();
-  /*if(!cap){
-    EMG();
-    delay(50);
-    }*/
-  
+
   if(cap){
       EMG(2200);
       if (_timeout){
@@ -461,10 +456,7 @@ void readFile(void) {
     Serial.println(line);
   }
     //buf += "<br />";
-  //Serial.println("Acabou a leitura");
   rFile.close();
-  //Serial.print(buf2);
-
 }
  
 void closeFS(void){
@@ -509,7 +501,7 @@ void EMG(int control){
     
   }
   
-  valor.add(analogRead(AnalogIn));
+  valor.add(analogRead(EWMA));
   
   if(onlinegraph){
     /////////////UDP SEND//////////////////////////////////////
