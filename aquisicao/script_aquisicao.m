@@ -1,30 +1,43 @@
-clear;close all;clc
+clear all;close all;clc
 format long
 
-% fileID = fopen('aquicicao1.txt','r');
-% x = fscanf(fileID,'%f');
+fileID = fopen('aquisicao11.txt','r');
+y = fscanf(fileID,'%d,');
+fclose(fileID);
+conv = (1/1024);
+y=y-min(y)-28;
+y = y*conv;
+dt1 = datenum([2018,8,14,22,0,0]);
+dt2 = datenum([2018,8,15,6,0,0]);
+testeX = linspace(dt1,dt2,size(y,1));
+testeX_date = datetime(testeX,'ConvertFrom','datenum','Format','HH:mm');
+% testeX_date2 = datetime(testeX,'ConvertFrom','datenum','Format','yyyy-MM-dd HH:mm:ssss');
+
+% j=1;
+% for i=1:size(y,1)
+%     if y(i) >= 10*conv
+%         yy(j,1) = y(i,1);
+%         xx(j,1)=testeX_date(1,i);
+%         zz(j,:) = {testeX_date2(1,i),y(i,1)};
+%         j=j+1;
+%     end
+% end
+% zz=zz';
+
+% formatSpec = 'x%sy%d,';
+% fileID = fopen('dadosFiltradosz1.txt','w');
+% % [nrows,ncols] = size(zz);
+% % for row = 1:nrows
+% %     fprintf(fileID,formatSpec,zz{row,:});
+% % end
+% fprintf(fileID,'%d,',yy);
 % fclose(fileID);
 
-fileID = fopen('aquisicao13.txt','r');
-x = fscanf(fileID,'%d,');
-x=x-20;
-for k=1:size(x,1)
-    if x(k) < 0
-        x(k) = 0;
-    end
-end
-fclose(fileID);
-time.mili = size(x,1)*100;
-time.sec = time.mili/1000;
-time.min = time.sec/60;
-time.hora = time.min/60;
-
-dt1 = datenum([2018,8,16,22,0,0]);
-dt2 = datenum([2018,8,17,6,0,0]);
-testeY = linspace(dt1,dt2,size(x,1));
-testeY_date = datetime(testeY,'ConvertFrom','datenum');
-plot(testeY_date,x, 'LineWidth', .3)
-
-title('Aquisição Bruxismo 16/08/2018', 'FontSize', 60)
-ylabel('Sinal 0-1 Volts convertido em 10bits', 'FontSize', 30)
+figure
+% plot(xx(:,1),yy(:,1))
+plot(testeX_date(1:1000),y(1:1000), 'LineWidth', .3)
+set(gca,'FontSize',15);
+title('Aquisição Bruxismo 14/08/2018', 'FontSize', 45)
+ylabel('Sinal EMG (V)', 'FontSize', 60)
 xlabel('Horário da Aquisição', 'FontSize', 45)
+ylim([0 0.18])

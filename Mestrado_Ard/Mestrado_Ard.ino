@@ -19,13 +19,12 @@
 static os_timer_t mTimer;
 //static os_timer_t2 mTimer;
 bool cap = false, _timeout = false, onlinegraph = false;
-String buf,buf2,jsonout;
+String buf,buf2,jsonout,timeStamp = "";
 const int AnalogIn  = A0;
-
+const char* ip = "";
 int ADread = 0, mod = 0, i = 0, contr = 2, count = 0, p = 0, Off_set = 495, vals[100];
 float EWMA = 0.0, batVal = 0.0;
 long startTime, recordTime, batValInt = 0;
-
 //const char* nomeSSID = "ESP Node Mestrado";
 //const int WakeUp = D1;
 
@@ -104,6 +103,7 @@ void setup() {
   server.on("/mestrado/online", online);
   server.on("/mestrado/offline", offline);
   server.on("/mestrado/bite", bite);
+  server.on("/mestrado/ts", ts);
   server.onNotFound(handleNotFound);
   server.begin();
 
@@ -135,6 +135,18 @@ void setup() {
   Udp.begin(localUdpPort);
 }
 
+void ts() { 
+
+  timeStamp = "";
+  
+  if (server.arg("Timestamp")== "")    //Parameter not found
+    timeStamp = "Timestamp Argument not found";
+  else{     //Parameter found
+    timeStamp = server.arg("Timestamp");     //Gets the value of the query parameter  
+  }
+  server.send(200, "text/plain", timeStamp);          //Returns the HTTP response
+}
+
 void bite(){
   EMG(1500);
   if(round(EWMA)>30){
@@ -147,8 +159,11 @@ void bite(){
     //server.send(200,"text/html","Inferior");
 }
 void online(){
+  String aux = server.arg("IP");
+  //server.arg("IP").toCharArray(ip,sizeof(ip));
+  //ip = aux.c_str();
   onlinegraph = true;
-  server.send ( 200, "text/html", "Online Habilitado");
+  server.send ( 200, "text/html", ip);
 }
 
 void offline(){
@@ -266,11 +281,6 @@ void listen()//Sub-rotina que verifica se há pacotes UDP's para serem lidos.
 //       Udp.println(jsonout);
 //       Udp.endPacket();
 
-//    for (int i = 0; i < 800; i++){
-//      ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
-//      mod = abs (ADread);  //calcula o módulo da leitura do AD
-//      EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
-//    }
     Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
     Udp.println(round(EWMA));
     Udp.endPacket();
@@ -498,20 +508,17 @@ void EMG(int control){
     EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
     
   }
-//  Serial.println((EWMA));  //imprime o valor da EWMA
-//  valor.add(round(EWMA));
-//  Serial.println(analogRead(AnalogIn));  //imprime o valor da EWMA
+  
   valor.add(analogRead(AnalogIn));
-  //writeFile(String(round(EWMA)));
   
   if(onlinegraph){
     /////////////UDP SEND//////////////////////////////////////
     Udp.beginPacket("192.168.4.2", localUdpPort);
-  //  Udp.println(analogRead(AnalogIn));
     Udp.println(round(EWMA));
     Udp.endPacket();
     //////////////////////////////////////////////////////////
   }
+  
   if(valor.size() > 99){
     jsonBuffer.clear();     
     JsonObject root = jsonBuffer.to<JsonObject>();
