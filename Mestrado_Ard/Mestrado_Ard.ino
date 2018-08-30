@@ -149,14 +149,13 @@ void ts() {
 }
 
 void bite(){
-//  EMG(1000);
-  server.send(200,"text/html","Morder");
-//  if(round(EWMA)>30){
-//    server.send(200,"text/html","Morder");
-//    EWMA = 5;
-//  }
-//   else
-//    server.send(200,"text/html",String(round(EWMA)));
+  EMG(1000);
+  if(round(EWMA)>30){
+    server.send(200,"text/html","Morder");
+    EWMA = 5;
+  }
+   else
+    server.send(200,"text/html",String(round(EWMA)));
 }
 void online(){
   //String aux = server.arg("IP");
