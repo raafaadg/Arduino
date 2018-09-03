@@ -3,9 +3,10 @@ format long
 
 fileID = fopen('aquisicao11.txt','r');
 y = fscanf(fileID,'%d,');
+% y = fscanf(fileID,'%d');
 fclose(fileID);
 conv = (1/1024);
-y=y-min(y)-28;
+y=y-min(y)-29;
 y = y*conv;
 dt1 = datenum([2018,8,14,22,0,0]);
 dt2 = datenum([2018,8,15,6,0,0]);
@@ -35,8 +36,8 @@ testeX_date = datetime(testeX,'ConvertFrom','datenum','Format','HH:mm');
 
 figure
 % plot(xx(:,1),yy(:,1))
-plot(testeX_date(1:1000),y(1:1000), 'LineWidth', .3)
-set(gca,'FontSize',15);
+plot(testeX_date,y, 'LineWidth', 1.5)
+set(gca,'FontSize',25);
 title('Aquisição Bruxismo 14/08/2018', 'FontSize', 45)
 ylabel('Sinal EMG (V)', 'FontSize', 60)
 xlabel('Horário da Aquisição', 'FontSize', 45)

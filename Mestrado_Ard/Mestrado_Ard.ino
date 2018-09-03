@@ -492,12 +492,11 @@ void writeResponse(WiFiClient& client, JsonObject json) {
   serializeJsonPretty(json,client);
 }
 
-void EMG(int control){
+void EMG(int control){ // control = 800 para online e 2200 para offline
   for (i = 0; i < control; i++){
     ADread = analogRead(AnalogIn)-Off_set;  //efetua a leitura do AD e subtrai do seu nivel de off-set
     mod = abs (ADread);  //calcula o módulo da leitura do AD
-    EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel exponencial para 10000 amostras
-    
+    EWMA = mod*0.0001+EWMA*0.9999;  // calcula a média movel para as amostras
   }
   
   valor.add(analogRead(EWMA));
