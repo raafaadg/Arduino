@@ -167,14 +167,14 @@ void online(){
 
 void offline(){
   onlinegraph = false;
-  server.send ( 200, "text/html", "Online Desabilitado");
+  server.send ( 200, "text/plain", "Online Desabilitado");
 }
 
 void gpio4Off(){
   pinMode(bat,INPUT);
   //digitalWrite(bat,0);
 //  server.send ( 200, "text/html", "GPIO OFF" );
-  server.send ( 200, "text/html", String(millis()));
+  server.send ( 200, "text/plain", String(millis()));
   }
   
 void gpio4On(){
